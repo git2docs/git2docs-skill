@@ -28,7 +28,7 @@ correct docs) go to the git2docs team as product feedback — a separate channel
 Clone this repo into your Claude Code skills directory (or as a plugin):
 
 ```bash
-git clone https://github.com/<owner>/git2docs-skill ~/.claude/skills/git2docs
+git clone https://github.com/git2docs/git2docs-skill ~/.claude/skills/git2docs
 ```
 
 ## Setup
