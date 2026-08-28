@@ -1,0 +1,15 @@
+{
+  "name": "git2docs",
+  "owner": {
+    "name": "Git2Docs",
+    "email": "support@git2docs.com",
+    "url": "https://git2docs.com"
+  },
+  "plugins": [
+    {
+      "name": "git2docs-skill",
+      "source": ".",
+      "description": "Validate your git2docs-generated documentation against your actual code and runtime, and report findings back."
+    }
+  ]
+}

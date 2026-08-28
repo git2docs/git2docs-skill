@@ -25,10 +25,19 @@ correct docs) go to the git2docs team as product feedback — a separate channel
 
 ## Install
 
-Clone this repo into your Claude Code skills directory (or as a plugin):
+In Claude Code, add this repo as a plugin marketplace and install the skill:
+
+```
+/plugin marketplace add git2docs/git2docs-skill
+/plugin install git2docs-skill
+```
+
+Or, to use it without the plugin system, copy the skill into your skills
+directory:
 
 ```bash
-git clone https://github.com/git2docs/git2docs-skill ~/.claude/skills/git2docs
+git clone https://github.com/git2docs/git2docs-skill /tmp/g2d-skill
+cp -r /tmp/g2d-skill/skills/git2docs ~/.claude/skills/git2docs
 ```
 
 ## Setup
