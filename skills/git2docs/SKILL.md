@@ -194,12 +194,20 @@ Code-derived docs can only be as good as the code is legible.
 - **Right channel.** Wrong claim → finding; un-derivable exact string → fact;
   missing derivable topic → section / coverage gap; structure → toc proposal;
   platform limitation → product gap.
+- **Root cause before Apply.** A finding becomes an Apply patch the next full
+  regen overwrites — and a facts-triggered regen is costly — so route to the
+  durable fix first: wrong/stale code or a misleading comment → fix the **repo**
+  (cheap regen — only pages reading that file re-synth); un-derivable exact string
+  → **`report_fact`**. Reserve `report_finding` → Apply for a genuine synthesis
+  error over correct code. When you summarize, **recommend Apply LAST** — repo
+  fixes + facts + one regen first, so you don't Apply patches a regen throws away.
 - **Prefer the sustaining fix.** Re-ground (`add_source_hints`) or capture a fact
   over a frozen `direct_edit`; a `direct_edit` stops that section regenerating.
 - **Don't spam.** One finding per real problem; dedupe. No stylistic nitpicks —
   only genuine inaccuracy or insufficiency.
 - **Close the session.** Always `end_validation` with a verdict; use `clean` only
   when no regeneration is in flight.
-- **Summarize at the end:** version validated, pages checked, findings filed (by
-  kind), facts added/re-anchored, coverage and repo-health gaps raised, product
-  gaps flagged, and anything you couldn't verify.
+- **Summarize at the end**, ordering the recommendation by durability: repo fixes
+  and facts first, **then** Apply. Include: version validated, pages checked,
+  findings filed (by kind), facts added/re-anchored, coverage and repo-health gaps
+  raised, product gaps flagged, and anything you couldn't verify.
