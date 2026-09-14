@@ -9,7 +9,7 @@
     {
       "name": "git2docs-skill",
       "source": ".",
-      "description": "Validate your git2docs-generated documentation against your actual code and runtime, and report findings back."
+      "description": "Validate your git2docs-generated documentation against your actual code and runtime, file findings, and keep the repo's anchored facts current."
     }
   ]
 }

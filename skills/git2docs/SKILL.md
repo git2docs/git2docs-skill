@@ -2,28 +2,35 @@
 name: git2docs
 description: >-
   Validate your git2docs-generated documentation against your actual code and
-  runtime, and report findings back. Use when a maintainer wants to check that
-  their published docs are accurate and sufficient — verify documented CLI
-  commands, API endpoints, config, and behavior against the real repo, then
-  file findings (and flag git2docs product gaps) through the git2docs MCP.
+  runtime, report findings, and keep the repo's anchored facts current. Use when
+  a maintainer wants their published docs proven accurate and sufficient — verify
+  documented CLI/API/config/behavior against the real repo, file findings and
+  coverage gaps, capture anchored facts (docs/docsync-context.yaml) for exact
+  strings no extractor can derive, and flag git2docs product gaps — all through
+  the git2docs MCP.
 ---
 
-# git2docs — validate your docs against your code
+# git2docs — validate your docs and keep them true to the code
 
 You are the maintainer's **own** agent. You have their codebase and can run
-their runtime, so you can do what git2docs (running remotely) cannot: check
-that the documentation matches reality, and report what's wrong. git2docs
-never runs anything — it just serves the docs/claims and receives your
-findings, which flow into its Tell-AI → review → apply loop.
+their runtime, so you can do what git2docs (running remotely) cannot: check that
+the documentation matches reality, fix the inputs it's generated from, and
+capture the exact facts the code implies. git2docs never runs anything — it
+serves the docs/claims and receives your findings and facts, which flow into its
+review → apply loop and the next regeneration.
+
+Two jobs, both measurable:
+
+- **Accuracy** — every documented CLI/API/config claim matches the code (findings → 0).
+- **Sufficiency** — the whole public surface has a page (coverage → 100%).
 
 ## One-time setup
 
-1. In git2docs, go to **Settings → Access tokens** and create a token
-   (`g2d_…`, shown once). Put it in an env var: `export GIT2DOCS_TOKEN=g2d_…`.
-2. Identify the org slug and product slug (from the docs URL:
-   `git2docs.com/<org>/docs/<product>`).
-3. Connect the authenticated MCP server. In Claude Code, add to `.mcp.json`
-   (or `claude mcp add`):
+1. In git2docs, **Settings → Access tokens** → create a token (`g2d_…`, shown
+   once). Put it in an env var: `export GIT2DOCS_TOKEN=g2d_…`.
+2. Get the org and product slug from the docs URL:
+   `git2docs.com/<org>/docs/<product>`.
+3. Connect the **authenticated** MCP server (`.mcp.json`, or `claude mcp add`):
 
    ```json
    {
@@ -39,55 +46,160 @@ findings, which flow into its Tell-AI → review → apply loop.
 
 Confirm the connection by calling `list_pages`.
 
-## The validation loop
+## Align to the release first — or every finding is suspect
 
-Work the docs page by page. For each page:
+The docs describe a specific release, not whatever branch you're on. Before
+comparing anything to code:
 
-1. **`list_pages`** — get the table of contents. Decide which pages to check
-   (start with the ones that make concrete, checkable claims: CLI reference,
-   API reference, configuration, getting-started, deployment).
-2. **`get_page_claims`** — the documented CLI/API surface extracted from the
-   code. This is your checklist for *accuracy*.
-3. **`get_page`** — the full page Markdown **and its section ids** (you need a
-   `section_id` to report a finding). Read it critically against the code.
-4. **Verify against ground truth** — this is the part only you can do:
-   - Run each documented **CLI command** (`--help`, or the real invocation in
-     a safe/dry-run mode) and compare flags, args, output.
-   - Check each **API endpoint**: does the route/method/params/response match
-     the code (handlers, router, OpenAPI, types)?
-   - Check **config keys**, env vars, defaults against where they're read.
-   - Check **code examples** compile / run.
-   - Judge **architecture / concept / workflow** prose against how the system
-     actually works (read the code, don't guess).
-5. **`list_coverage_gaps`** — undocumented public modules. This is your
-   *sufficiency* signal: is anything important missing?
+1. **`list_versions`** — pick the version to validate (published or a draft you
+   can check before it goes live). Note its `generated_at_commit`.
+2. **`get_status`** — confirm it isn't mid-regeneration (`generating: false`) and
+   read the commit its docs were generated/validated against.
+3. **`git checkout <generated_at_commit or tag>`** in your local repo.
 
-## Reporting
+Validating against a different commit produces false findings. `get_page`,
+`get_page_claims`, and `get_status` all take an optional `version` — pass the
+same one throughout.
 
-Use the **right channel** — this matters:
+## The validation loop (inside a session)
 
-- **`report_finding({ section_id, kind, detail, suggested_fix? })`** — for a
-  problem in *their docs*. Pick `kind`: `inaccurate`, `outdated`,
-  `broken_example`, `contradicts_code`, `misleading`, `insufficient`,
-  `missing_topic`. Put the **evidence** in `detail` (the command you ran, the
-  code you read, the exact mismatch). Add a `suggested_fix` when you can. It
-  becomes a comment on that section and is applied on the next regen.
+Open a session so git2docs knows a pass is UNDERWAY — "done" is now **declared**,
+not inferred from silence.
 
-- **`report_product_gap({ desired_outcome, limitation, blocked_doc_change?, severity?, page_id? })`**
-  — for a limitation in **git2docs itself** that blocks the correct docs
-  (e.g. "the config can't express X", "a section can't be pinned the way this
-  page needs", "the generated diagram can't represent this topology", "no way
-  to mark this page as manually authored"). This goes to the git2docs team,
-  **not** the customer's doc comments. Report it whenever you *know* the right
-  documentation outcome but the platform can't get you there.
+1. **`begin_validation({ version })`** → keep the returned `session_id`. Your
+   reads and reports heartbeat it; if you crash or stop, it's marked *abandoned*
+   after ~5 min (never counted as a false "converged"). Reconnecting resumes a
+   still-fresh session. It's refused while a regeneration is in flight.
+
+2. Work page by page — start with the pages that make concrete, checkable claims
+   (CLI reference, API reference, configuration, getting-started, deployment).
+   For each:
+   - **`get_page_claims`** — the checkable surface the extractors parsed. Read
+     `extracted_kinds`: where a kind is **present**, verify the docs against it;
+     where a kind is **absent**, those docs have no backing surface — check the
+     code directly and file a **product gap** (a whole missing kind is an
+     extractor coverage gap, not a per-page finding). Heed the completeness
+     warnings — treat the surface as a checklist, not gospel.
+   - **`get_page`** — full Markdown plus the `section_id`s you need to report,
+     and grounding signals. If a page makes code claims but `grounded_in_code` is
+     `false` (its hints are all prose — README/design docs) or
+     `grounding_confidence` is low, **re-ground** it (`add_source_hints`) rather
+     than only filing findings.
+   - **Verify against ground truth** — the part only you can do: run each
+     documented CLI command (`--help` or a safe/dry-run invocation) and compare
+     flags/args/output; check each API endpoint's route/method/params/response
+     against the code; check config keys, env vars, and defaults where they're
+     read; compile/run examples; judge architecture/concept/workflow prose
+     against how the system actually works (read the code, don't guess).
+
+3. Report through the **right channel** (see the guide below) — including
+   **anchored facts** for exact strings no extractor grounds.
+
+4. **`list_coverage_gaps`** — undocumented public modules (your sufficiency
+   checklist). For a gap git2docs should document, `report_finding({ module, … })`.
+
+5. **`end_validation({ session_id, verdict })`** — `clean` (checked, nothing to
+   fix), `findings_filed`, or `incomplete` (stopped early). This is what tells
+   git2docs the pass is complete. A `clean` verdict is refused while a
+   regeneration is in flight.
+
+## Choosing the right channel
+
+Using the right channel is the whole game — don't collapse everything into
+`report_finding` prose.
+
+- **Wrong claim in an existing page** → `report_finding({ section_id, kind,
+  detail, suggested_fix? })`. `kind` ∈ inaccurate, outdated, broken_example,
+  contradicts_code, misleading, insufficient, missing_topic. Put the **evidence**
+  in `detail` (the command you ran, the file+line you read, the exact mismatch).
+  Apply regenerates that section from code.
+- **Undocumented module** (from `list_coverage_gaps`, no page at all) →
+  `report_finding({ module, kind: "missing_topic", detail })`. Apply materialises
+  a page grounded in that module. (Provide exactly one of `section_id` or `module`.)
+- **Exact string no extractor derives** — an object/namespace/label name, an
+  artifact name, a compatibility claim → **`report_fact`** (see the next
+  section). This is the *durable* fix; don't bury such a string in finding prose.
+- **Page fabricating because it wasn't pointed at its code** →
+  `add_source_hints({ space_slug, page_slug, hints })` → the page re-synthesizes
+  grounded in that code; the hints persist across future regens.
+- **Missing topic that IS derivable from code** → `add_section({ space_slug,
+  page_slug, title, instruction, source_hints? })` → generated from code, lands
+  `ai_owned` (keeps regenerating). Confirm with the user first.
+- **Structure is wrong** (rename / remove / add / reorder pages) →
+  `propose_toc_change(...)` — a human-gated proposal that lands on the Findings
+  page; it never changes published docs directly.
+- **A correct claim the generator simply can't be made to produce** →
+  `direct_edit({ section_id, new_text, code_evidence })` — **last resort**. It
+  freezes the section `agent_owned`; regen never overwrites a frozen section
+  (freeze is absolute), so use it only after a finding has survived the
+  regenerate/apply loop, and confirm with the user. To let regen own it again,
+  call `reset_ownership` first.
+- **git2docs itself can't get you the right outcome** (config can't express X, a
+  whole surface can't be extracted, a diagram can't represent the topology) →
+  `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
+
+## Keep the anchored facts current with the code
+
+Anchored facts (`docs/docsync-context.yaml`) are how the docs stay true for the
+exact strings no extractor reaches. Each is **anchored** to the source line that
+proves it (`src: "path:line"` + `match`), and git2docs re-resolves every anchor
+at generation time, **dropping** any that no longer hold. So a fact can never
+silently become a lie — when the code moves, a stale anchor just drops
+(fail-safe). Your job, on every pass, is to keep them current:
+
+1. **`get_facts`** — the facts currently in `docs/docsync-context.yaml`, plus any
+   `report_fact` captures not yet applied to the file. Read this *before*
+   re-deriving anything.
+2. Reconcile against the checked-out code:
+   - **Re-anchor** any fact whose line moved (a refactor shifted it) — call
+     `report_fact` again with the corrected `src`/`match`.
+   - **Retract** any fact that's no longer true.
+   - **Add** a fact (`report_fact`) whenever the code grew a new exact string a
+     page must reproduce that no extractor derives. Always include `src` — an
+     unanchored fact is never grounded.
+3. Apply the accumulated set to `docs/docsync-context.yaml` (`facts:`) and open a
+   PR the maintainer reviews. The next regeneration grounds every fact whose
+   anchor still resolves.
+
+You do **not** need to build a per-repo drift checker: the server's
+re-verification is the guard between runs (stale anchors drop; nothing wrong
+ships). Re-running this reconciliation each release is what keeps facts current —
+dropped anchors get re-anchored on the next pass.
+
+If `get_facts` returns nothing, it hands back the canonical authoring prompt —
+use it to bootstrap `docs/docsync-context.yaml`.
+
+## Raise the input, not just the output (repo health)
+
+Code-derived docs can only be as good as the code is legible.
+
+- **`get_repo_health`** — the doc-readiness grade (score/100 + A–F + per-category
+  pass/warn/fail): the input-side twin of accuracy.
+- **`list_health_gaps`** — the ranked, actionable checklist: missing docstrings,
+  untyped signatures, no examples, an API/schema the extractor can't parse. Fix
+  the **source** these point at in your checkout (a PR the maintainer reviews),
+  then regenerate — accuracy and coverage both rise. An `api_schema` /
+  `code_quality` gap is often *why* a whole surface (routes, CLI, serializers,
+  error codes, enums) couldn't be extracted — the single highest-leverage fix. If
+  a "gap" is really our extractor missing correct code, `report_product_gap`
+  instead of changing correct code.
 
 ## Rules
 
-- **Evidence, not vibes.** Every finding must be grounded in something you
-  actually ran or read. Quote the command / file / line.
-- **Don't spam.** One finding per real problem; dedupe. Don't file a finding
-  for a stylistic preference — only genuine inaccuracy or insufficiency.
-- **Accuracy and sufficiency both.** Wrong claims *and* missing coverage are
-  in scope — the whole documented surface, not just CLI/API.
-- **Summarize at the end**: pages checked, findings filed (by kind), product
+- **Align first.** Check out the release's commit before comparing docs to code,
+  or you'll file false findings.
+- **Evidence, not vibes.** Every finding and every fact must be grounded in
+  something you actually ran or read — quote the command / file / line. Anchor
+  every fact (`src`) or it won't ground.
+- **Right channel.** Wrong claim → finding; un-derivable exact string → fact;
+  missing derivable topic → section / coverage gap; structure → toc proposal;
+  platform limitation → product gap.
+- **Prefer the sustaining fix.** Re-ground (`add_source_hints`) or capture a fact
+  over a frozen `direct_edit`; a `direct_edit` stops that section regenerating.
+- **Don't spam.** One finding per real problem; dedupe. No stylistic nitpicks —
+  only genuine inaccuracy or insufficiency.
+- **Close the session.** Always `end_validation` with a verdict; use `clean` only
+  when no regeneration is in flight.
+- **Summarize at the end:** version validated, pages checked, findings filed (by
+  kind), facts added/re-anchored, coverage and repo-health gaps raised, product
   gaps flagged, and anything you couldn't verify.
