@@ -2,25 +2,33 @@
 
 A [Claude Code](https://claude.com/claude-code) skill that validates your
 [git2docs](https://git2docs.com)-generated documentation against your **actual
-code and runtime**, and reports findings back — so your docs stay accurate and
-complete.
+code and runtime**, reports findings, and keeps the repo's anchored facts
+current — so your docs stay accurate and complete.
 
 git2docs generates your docs from source and re-syncs them on every push. This
 skill closes the loop from the other side: **your own** coding agent — which
 has your repo and can run your product — verifies that what the docs claim is
-true, and files findings through git2docs' authenticated MCP server. git2docs
-never runs your code; the agent validates locally and only reads the docs +
-writes findings.
+true, files findings, and keeps the repo's anchored facts current, through
+git2docs' authenticated MCP server. git2docs never runs your code; the agent
+validates locally and only reads the docs + writes findings, facts, and
+enrichment back.
 
-## What it checks
+## What it checks — and fixes
 
 - **Accuracy** — documented CLI commands, API endpoints, config keys, and code
   examples actually match the running code; architecture/workflow prose
   reflects how the system really works.
 - **Sufficiency** — undocumented public surface that should be covered.
+- **Anchored facts** — exact strings no extractor can derive (object /
+  namespace / label / artifact names, compatibility claims) are captured into
+  `docs/docsync-context.yaml`, each anchored to the source line that proves it,
+  and kept current as the code moves.
+- **Input fidelity** — repo doc-readiness gaps (missing docstrings, untyped
+  signatures, unextractable schemas) that make the docs thin or fabricate.
 
 Findings you file become comments on the relevant doc section and flow into
-git2docs' review → apply loop. Limitations in git2docs *itself* (that block the
+git2docs' review → apply loop. Facts flow into `docs/docsync-context.yaml` and
+ground the next regeneration. Limitations in git2docs *itself* (that block the
 correct docs) go to the git2docs team as product feedback — a separate channel.
 
 ## Install
@@ -73,8 +81,15 @@ cp -r /tmp/g2d-skill/skills/git2docs ~/.claude/skills/git2docs
 
 ## MCP tools
 
-Read: `list_pages`, `get_page`, `get_page_claims`, `list_coverage_gaps` ·
-Write: `report_finding`, `report_product_gap`.
+- **Orient / align:** `list_pages`, `list_versions`, `get_status`
+- **Session:** `begin_validation`, `end_validation`
+- **Read / verify:** `get_page`, `get_page_claims`, `list_coverage_gaps`
+- **Report:** `report_finding` (section or coverage-gap module),
+  `report_fact` / `get_facts` (anchored facts → `docs/docsync-context.yaml`),
+  `propose_toc_change`, `report_product_gap`
+- **Enrich:** `add_source_hints`, `add_section`, `set_guidance`,
+  `direct_edit` (last resort), `reset_ownership`
+- **Input fidelity:** `get_repo_health`, `list_health_gaps`
 
 ## License
 
