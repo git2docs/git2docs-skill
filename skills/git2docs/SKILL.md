@@ -137,6 +137,12 @@ Using the right channel is the whole game — don't collapse everything into
 - **git2docs itself can't get you the right outcome** (config can't express X, a
   whole surface can't be extracted, a diagram can't represent the topology) →
   `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
+- **A finding already satisfied by the current docs** (a prior finding that a
+  regen or repo fix has since addressed) → `dismiss_finding({ finding_id, reason })`.
+  `list_findings` shows the open set (yours + the maintainer's). Dismiss ONLY
+  after re-verifying the page against the code **this pass** — not to look
+  converged; a maintainer can reopen it. Keeping the set clean means a later
+  blanket Apply doesn't re-push moot (or stale) patches.
 
 ## Keep the anchored facts current with the code
 
@@ -205,6 +211,10 @@ Code-derived docs can only be as good as the code is legible.
   over a frozen `direct_edit`; a `direct_edit` stops that section regenerating.
 - **Don't spam.** One finding per real problem; dedupe. No stylistic nitpicks —
   only genuine inaccuracy or insufficiency.
+- **Clear what's fixed.** After a regen or a repo fix, re-check and
+  `dismiss_finding` any open finding the change already satisfied (`list_findings`
+  shows the set). Applying a moot finding wastes a regen, and a stale correction
+  written to the brief/facts persists — so dismiss, don't blanket-Apply.
 - **Close the session.** Always `end_validation` with a verdict; use `clean` only
   when no regeneration is in flight.
 - **Summarize at the end**, ordering the recommendation by durability: repo fixes
