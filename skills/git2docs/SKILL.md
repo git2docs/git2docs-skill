@@ -197,7 +197,38 @@ Code-derived docs can only be as good as the code is legible.
   a "gap" is really our extractor missing correct code, `report_product_gap`
   instead of changing correct code.
 
+## Structure is a fidelity lever — split an overloaded page
+
+Fidelity is decided *upstream* of validation, in the TOC. A page that tries to
+cover several distinct things at once — three install options, N deployment
+modes, a whole subsystem, each running long — forces the synthesizer to compress
+many sources into one page, and **compression is where it fabricates.** No
+amount of findings and Apply saves a structurally-overloaded page; you just burn
+retries and regens on a page that can't ground.
+
+Spot it from `get_page`: the page spans multiple distinct subjects, it's very
+long, `grounded_in_code` is false or `grounding_confidence` is low, and/or its
+`source_hints` are broad, empty, or all prose. The durable fix is **split +
+re-hint**:
+
+1. **Split** — `propose_toc_change({ action: 'add', title, parent_page_slug, … })`,
+   one focused subpage per distinct subject (one per option / mode / component).
+2. **Re-hint** — `add_source_hints({ space_slug, page_slug, hints })` on each
+   subpage, pointing at *that subject's* code/config, not the whole area.
+3. **Then** regenerate. Each focused page grounds cleanly — one regen replaces a
+   dozen finding→Apply rounds fighting a monolith that never had a chance.
+
+Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
+hints — BEFORE** you recommend a regen or start filing content findings. Work in
+pages and hints; `docsync-context` config is just the durable backing that makes
+the split survive regens.
+
 ## Rules
+
+- **Structure before findings.** Before recommending a regen or filing content
+  findings, sanity-check the TOC: an overloaded page (many subjects / very long /
+  weak grounding / broad hints) fabricates no matter what — split it into focused
+  subpages with per-page hints first. Cheapest, most durable fidelity lever.
 
 - **Align first.** Check out the release's commit before comparing docs to code,
   or you'll file false findings.
