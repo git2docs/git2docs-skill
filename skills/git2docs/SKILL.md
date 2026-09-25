@@ -125,9 +125,16 @@ Using the right channel is the whole game — don't collapse everything into
 - **Missing topic that IS derivable from code** → `add_section({ space_slug,
   page_slug, title, instruction, source_hints? })` → generated from code, lands
   `ai_owned` (keeps regenerating). Confirm with the user first.
-- **Structure is wrong** (rename / remove / add / reorder pages) →
-  `propose_toc_change(...)` — a human-gated proposal that lands on the Findings
-  page; it never changes published docs directly.
+- **Structure is wrong** → `propose_toc_change({ action, … })` — a human-gated
+  proposal that lands on the Findings page; it never changes published docs
+  directly. Actions: `rename` (`page_slug` + `new_title`), `remove` (`page_slug`),
+  `add` (`title` [+ `doc_type`]; pass `parent_page_slug` to nest it as a
+  **subpage** under a top-level page, one level deep), `reorder` (`page_slugs` —
+  the desired order of a set of siblings: all top-level, or all children of one
+  parent). Identify pages by `space_slug` + `page_slug` from `list_pages`. All
+  four are config-backed, so an Applied change **survives full regens** (a real
+  missing code-derived page is better as a coverage-gap `report_finding`, which
+  generates the page grounded in code).
 - **A correct claim the generator simply can't be made to produce** →
   `direct_edit({ section_id, new_text, code_evidence })` — **last resort**. It
   freezes the section `agent_owned`; regen never overwrites a frozen section
@@ -190,7 +197,38 @@ Code-derived docs can only be as good as the code is legible.
   a "gap" is really our extractor missing correct code, `report_product_gap`
   instead of changing correct code.
 
+## Structure is a fidelity lever — split an overloaded page
+
+Fidelity is decided *upstream* of validation, in the TOC. A page that tries to
+cover several distinct things at once — three install options, N deployment
+modes, a whole subsystem, each running long — forces the synthesizer to compress
+many sources into one page, and **compression is where it fabricates.** No
+amount of findings and Apply saves a structurally-overloaded page; you just burn
+retries and regens on a page that can't ground.
+
+Spot it from `get_page`: the page spans multiple distinct subjects, it's very
+long, `grounded_in_code` is false or `grounding_confidence` is low, and/or its
+`source_hints` are broad, empty, or all prose. The durable fix is **split +
+re-hint**:
+
+1. **Split** — `propose_toc_change({ action: 'add', title, parent_page_slug, … })`,
+   one focused subpage per distinct subject (one per option / mode / component).
+2. **Re-hint** — `add_source_hints({ space_slug, page_slug, hints })` on each
+   subpage, pointing at *that subject's* code/config, not the whole area.
+3. **Then** regenerate. Each focused page grounds cleanly — one regen replaces a
+   dozen finding→Apply rounds fighting a monolith that never had a chance.
+
+Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
+hints — BEFORE** you recommend a regen or start filing content findings. Work in
+pages and hints; `docsync-context` config is just the durable backing that makes
+the split survive regens.
+
 ## Rules
+
+- **Structure before findings.** Before recommending a regen or filing content
+  findings, sanity-check the TOC: an overloaded page (many subjects / very long /
+  weak grounding / broad hints) fabricates no matter what — split it into focused
+  subpages with per-page hints first. Cheapest, most durable fidelity lever.
 
 - **Align first.** Check out the release's commit before comparing docs to code,
   or you'll file false findings.
