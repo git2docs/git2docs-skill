@@ -125,9 +125,16 @@ Using the right channel is the whole game — don't collapse everything into
 - **Missing topic that IS derivable from code** → `add_section({ space_slug,
   page_slug, title, instruction, source_hints? })` → generated from code, lands
   `ai_owned` (keeps regenerating). Confirm with the user first.
-- **Structure is wrong** (rename / remove / add / reorder pages) →
-  `propose_toc_change(...)` — a human-gated proposal that lands on the Findings
-  page; it never changes published docs directly.
+- **Structure is wrong** → `propose_toc_change({ action, … })` — a human-gated
+  proposal that lands on the Findings page; it never changes published docs
+  directly. Actions: `rename` (`page_slug` + `new_title`), `remove` (`page_slug`),
+  `add` (`title` [+ `doc_type`]; pass `parent_page_slug` to nest it as a
+  **subpage** under a top-level page, one level deep), `reorder` (`page_slugs` —
+  the desired order of a set of siblings: all top-level, or all children of one
+  parent). Identify pages by `space_slug` + `page_slug` from `list_pages`. All
+  four are config-backed, so an Applied change **survives full regens** (a real
+  missing code-derived page is better as a coverage-gap `report_finding`, which
+  generates the page grounded in code).
 - **A correct claim the generator simply can't be made to produce** →
   `direct_edit({ section_id, new_text, code_evidence })` — **last resort**. It
   freezes the section `agent_owned`; regen never overwrites a frozen section
