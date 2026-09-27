@@ -182,7 +182,12 @@ current:
      page must reproduce that no extractor derives. Always include `src` — an
      unanchored fact is never grounded. Prefer a `match` that's **unique in the
      file** (or whose duplicates all attest the same thing) so the line stays
-     advisory.
+     advisory. When the match **can't** be unique — a shared YAML value like
+     `default: protector` that many options carry — add a **`near:`**
+     disambiguator (a string on the owning line, e.g. the option name a line or
+     two up). Resolution then pins the fact to the occurrence nearest `near`, so
+     it identifies one option and a rename drops it loudly instead of
+     re-anchoring to the wrong one.
 4. Apply the set to `docs/docsync-context.yaml` (`facts:`) and open a PR the
    maintainer reviews. The next regeneration grounds every fact whose match
    still resolves.
