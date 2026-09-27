@@ -154,30 +154,38 @@ Using the right channel is the whole game — don't collapse everything into
 ## Keep the anchored facts current with the code
 
 Anchored facts (`docs/docsync-context.yaml`) are how the docs stay true for the
-exact strings no extractor reaches. Each is **anchored** to the source line that
-proves it (`src: "path:line"` + `match`), and git2docs re-resolves every anchor
-at generation time, **dropping** any that no longer hold. So a fact can never
-silently become a lie — when the code moves, a stale anchor just drops
-(fail-safe). Your job, on every pass, is to keep them current:
+exact strings no extractor reaches. Each is **anchored** to the source that
+proves it — `match` is the **identity**, `src: "path:line"` is only a **hint**.
+git2docs re-resolves every anchor at generation time by finding the `match`
+anywhere in the file: a fact drops **only when its match is genuinely gone**
+(fail-safe — a stale fact can never ship), and a match that merely moved to a new
+line is **re-anchored**, not dropped. Your job, on every pass, is to keep them
+current:
 
 1. **`get_facts`** — the facts currently in `docs/docsync-context.yaml`, plus any
    `report_fact` captures not yet applied to the file. Read this *before*
    re-deriving anything.
-2. Reconcile against the checked-out code:
-   - **Re-anchor** any fact whose line moved (a refactor shifted it) — call
-     `report_fact` again with the corrected `src`/`match`.
-   - **Retract** any fact that's no longer true.
+2. **`verify_facts`** — re-resolves every anchor against the checked-out code and
+   returns: `verified` (still resolve), `dropped` (match gone — the code changed;
+   fix the code or retract/rewrite the fact), and `reanchored` (the match moved —
+   the `:line` hint is stale). When any hint drifted it returns a **patched**
+   `docs/docsync-context.yaml` with the hints rewritten — **write it back and
+   commit**. This is your CI drift-guard; run it after edits and after a regen.
+3. Then reconcile what `verify_facts` couldn't auto-fix:
+   - **Retract** any `dropped` fact that's no longer true.
    - **Add** a fact (`report_fact`) whenever the code grew a new exact string a
      page must reproduce that no extractor derives. Always include `src` — an
-     unanchored fact is never grounded.
-3. Apply the accumulated set to `docs/docsync-context.yaml` (`facts:`) and open a
-   PR the maintainer reviews. The next regeneration grounds every fact whose
-   anchor still resolves.
+     unanchored fact is never grounded. Prefer a `match` that's **unique in the
+     file** (or whose duplicates all attest the same thing) so the line stays
+     advisory.
+4. Apply the set to `docs/docsync-context.yaml` (`facts:`) and open a PR the
+   maintainer reviews. The next regeneration grounds every fact whose match
+   still resolves.
 
-You do **not** need to build a per-repo drift checker: the server's
-re-verification is the guard between runs (stale anchors drop; nothing wrong
-ships). Re-running this reconciliation each release is what keeps facts current —
-dropped anchors get re-anchored on the next pass.
+You do **not** need to build a per-repo drift checker — `verify_facts` is that
+guard, and the server re-resolves match-first at gen time regardless. Re-running
+this each release keeps facts current; a moved line is auto-re-anchored, and only
+a genuinely-deleted match needs your attention.
 
 If `get_facts` returns nothing, it hands back the canonical authoring prompt —
 use it to bootstrap `docs/docsync-context.yaml`.
@@ -197,7 +205,38 @@ Code-derived docs can only be as good as the code is legible.
   a "gap" is really our extractor missing correct code, `report_product_gap`
   instead of changing correct code.
 
+## Structure is a fidelity lever — split an overloaded page
+
+Fidelity is decided *upstream* of validation, in the TOC. A page that tries to
+cover several distinct things at once — three install options, N deployment
+modes, a whole subsystem, each running long — forces the synthesizer to compress
+many sources into one page, and **compression is where it fabricates.** No
+amount of findings and Apply saves a structurally-overloaded page; you just burn
+retries and regens on a page that can't ground.
+
+Spot it from `get_page`: the page spans multiple distinct subjects, it's very
+long, `grounded_in_code` is false or `grounding_confidence` is low, and/or its
+`source_hints` are broad, empty, or all prose. The durable fix is **split +
+re-hint**:
+
+1. **Split** — `propose_toc_change({ action: 'add', title, parent_page_slug, … })`,
+   one focused subpage per distinct subject (one per option / mode / component).
+2. **Re-hint** — `add_source_hints({ space_slug, page_slug, hints })` on each
+   subpage, pointing at *that subject's* code/config, not the whole area.
+3. **Then** regenerate. Each focused page grounds cleanly — one regen replaces a
+   dozen finding→Apply rounds fighting a monolith that never had a chance.
+
+Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
+hints — BEFORE** you recommend a regen or start filing content findings. Work in
+pages and hints; `docsync-context` config is just the durable backing that makes
+the split survive regens.
+
 ## Rules
+
+- **Structure before findings.** Before recommending a regen or filing content
+  findings, sanity-check the TOC: an overloaded page (many subjects / very long /
+  weak grounding / broad hints) fabricates no matter what — split it into focused
+  subpages with per-page hints first. Cheapest, most durable fidelity lever.
 
 - **Align first.** Check out the release's commit before comparing docs to code,
   or you'll file false findings.
