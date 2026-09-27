@@ -144,6 +144,8 @@ Using the right channel is the whole game — don't collapse everything into
 - **git2docs itself can't get you the right outcome** (config can't express X, a
   whole surface can't be extracted, a diagram can't represent the topology) →
   `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
+  Check **`list_product_gaps`** before re-filing: a gap you raised earlier may be
+  `closed` with a resolution (the shipping spec/PR) — don't re-report a fixed one.
 - **A finding already satisfied by the current docs** (a prior finding that a
   regen or repo fix has since addressed) → `dismiss_finding({ finding_id, reason })`.
   `list_findings` shows the open set (yours + the maintainer's). Dismiss ONLY
