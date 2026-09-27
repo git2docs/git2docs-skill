@@ -167,10 +167,13 @@ current:
    re-deriving anything.
 2. **`verify_facts`** — re-resolves every anchor against the checked-out code and
    returns: `verified` (still resolve), `dropped` (match gone — the code changed;
-   fix the code or retract/rewrite the fact), and `reanchored` (the match moved —
-   the `:line` hint is stale). When any hint drifted it returns a **patched**
-   `docs/docsync-context.yaml` with the hints rewritten — **write it back and
-   commit**. This is your CI drift-guard; run it after edits and after a regen.
+   fix the code or retract/rewrite the fact), `reanchored` (the match moved — the
+   `:line` hint is stale), and `ambiguous` (the `match` occurs more than once in
+   its file — advisory: tighten it to a file-unique string, or confirm every
+   occurrence attests the same fact). When any hint drifted it returns a
+   **patched** `docs/docsync-context.yaml` with the hints rewritten — **write it
+   back and commit**. This is your CI drift-guard; run it after edits and after a
+   regen.
 3. Then reconcile what `verify_facts` couldn't auto-fix:
    - **Retract** any `dropped` fact that's no longer true.
    - **Add** a fact (`report_fact`) whenever the code grew a new exact string a
