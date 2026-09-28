@@ -153,6 +153,31 @@ Using the right channel is the whole game — don't collapse everything into
   converged; a maintainer can reopen it. Keeping the set clean means a later
   blanket Apply doesn't re-push moot (or stale) patches.
 
+## Resolve git2docs' own structural checks (Tier-0)
+
+`list_structural_findings` returns git2docs' **structural** failures — a
+documented CLI/API/config artifact that doesn't match the extracted code
+surface, each with the exact artifact, `got` vs `expected`, and the defining
+`source_file:line`. These are separate from `list_findings` (they're recomputed
+every generation and clear when the regenerated content matches). **You are the
+fastest path to resolving them** — a human would edit prose; you fix the root so
+the fix is durable. In order of preference:
+
+1. **Fix the repo** — if the flag/route/command exists but the extractor missed
+   it, make it legible in the maintainer's checkout (a PR); if it's an extractor
+   limitation, `report_product_gap`.
+2. **Anchor a fact** — `report_fact` for the exact command/value in
+   `docs/docsync-context.yaml` so it grounds (use `near:` when the match isn't
+   file-unique).
+3. **Fix the doc claim** — `add_source_hints` + regenerate, or `direct_edit` as a
+   last resort, if the claim itself is wrong.
+
+Then **regenerate** — the check re-runs and matching findings clear.
+`dismiss_structural_finding({ finding_id, reason })` is the **last resort**: only
+for a claim you've confirmed correct that git2docs genuinely can't extract (file
+a `report_product_gap` for the extractor gap too). It's keyed to the command's
+identity, so it stays dismissed across regens.
+
 ## Keep the anchored facts current with the code
 
 Anchored facts (`docs/docsync-context.yaml`) are how the docs stay true for the
