@@ -122,6 +122,13 @@ Using the right channel is the whole game — don't collapse everything into
 - **Page fabricating because it wasn't pointed at its code** →
   `add_source_hints({ space_slug, page_slug, hints })` → the page re-synthesizes
   grounded in that code; the hints persist across future regens.
+- **Page grounded in the WRONG code** → `remove_source_hints({ space_slug,
+  page_slug, hints })` → drops those hints and resyncs the page. Use when a
+  pinned hint keeps reproducing a bad claim: a stale README, a file the repo
+  itself documents as inaccurate, a path that no longer exists. Pass the hints
+  exactly as `get_page` reports them; the response names what was removed and
+  what didn't match, so `removed: []` means nothing changed — check the strings
+  rather than assuming it worked. Remaining hints stay pinned.
 - **Missing topic that IS derivable from code** → `add_section({ space_slug,
   page_slug, title, instruction, source_hints? })` → generated from code, lands
   `ai_owned` (keeps regenerating). Confirm with the user first.
