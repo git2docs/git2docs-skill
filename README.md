@@ -48,6 +48,26 @@ git clone https://github.com/git2docs/git2docs-skill /tmp/g2d-skill
 cp -r /tmp/g2d-skill/skills/git2docs ~/.claude/skills/git2docs
 ```
 
+## Start here if you have no docs yet
+
+Before git2docs generates a repo for the first time, it asks for an **anchored
+facts** file — `docs/docsync-context.yaml` — recording the exact strings your
+docs must get right that no extractor can derive from code. Authoring it is the
+one job this skill does with **nothing but your checkout**: no git2docs account,
+no access token, no MCP server.
+
+Install the skill (above), then in your repo say:
+
+```
+Use the git2docs skill to bootstrap docs/docsync-context.yaml for this repo.
+```
+
+The agent reads the repo, proves each fact against a file and line, writes the
+file, and reports what it anchored and what it deliberately left out. Review it
+like any other change and commit it — then generate.
+
+Everything below needs a git2docs account.
+
 ## Setup
 
 1. In git2docs, open **Settings → Access tokens** and create a token

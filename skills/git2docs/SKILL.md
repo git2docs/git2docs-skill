@@ -6,8 +6,10 @@ description: >-
   a maintainer wants their published docs proven accurate and sufficient — verify
   documented CLI/API/config/behavior against the real repo, file findings and
   coverage gaps, capture anchored facts (docs/docsync-context.yaml) for exact
-  strings no extractor can derive, and flag git2docs product gaps — all through
-  the git2docs MCP.
+  strings no extractor can derive, and flag git2docs product gaps. Also use it to
+  author docs/docsync-context.yaml for the FIRST time, before a repo has ever been
+  generated — that bootstrap reads only the repo and needs no git2docs account,
+  token or MCP connection. Everything else runs through the git2docs MCP.
 ---
 
 # git2docs — validate your docs and keep them true to the code
@@ -24,7 +26,88 @@ Two jobs, both measurable:
 - **Accuracy** — every documented CLI/API/config claim matches the code (findings → 0).
 - **Sufficiency** — the whole public surface has a page (coverage → 100%).
 
+## Bootstrap the anchored facts — no account, no token, no MCP
+
+**This is the one job that needs nothing but the repo.** A maintainer connecting
+a repo to git2docs is told to author `docs/docsync-context.yaml` *before* the
+first generation — when they have no token, no product slug, and nothing
+generated to validate against. Do it from the checkout alone: do not set up MCP
+first, and do not call `get_facts`.
+
+Run this when you're asked to create, bootstrap or set up the facts file, or
+when `docs/docsync-context.yaml` is absent and the maintainer is about to
+generate docs for the first time. If the file already has a `facts:` section,
+this is not the job — see *Keep the anchored facts current* below.
+
+Write a `facts:` section (and `external:` if needed) into
+`docs/docsync-context.yaml`: an anchored, machine-checkable record of the exact
+strings the documentation must get right that a generator cannot extract from
+code. Create the file if it doesn't exist; **keep any existing product/sections
+config in it.**
+
+**What belongs here — and what doesn't.** git2docs already extracts the
+declarative surfaces: CRD schemas (field names, enum values, defaults, printer
+columns), Helm values, CLI entry points, API routes, type definitions. It does
+*not* reliably reach the exact strings that live in build config, templates,
+exported constants, or prose support docs. Capture only that second category.
+Skip anything already extracted — point at where those live under `authority:`
+as **pointers, never copies**; a copy becomes a second source of truth that
+drifts on the next build.
+
+**Derive the categories from THIS repo — there is no fixed taxonomy.** Ask: if
+someone wrote this repo's documentation from memory, which exact strings would
+they get wrong, and where would a reader notice? Look for:
+
+- names a user types or greps — object/resource names, namespaces, label and
+  annotation keys and selectors, env vars, config file names
+- values that must match exactly — artifact/image names, registry prefixes,
+  ports, paths
+- ownership and layout — which chart/package/artifact ships which thing
+- compatibility — supported platforms and versions, what is *tested* versus
+  merely expected to work
+
+Name the sections in the repo's own vocabulary; omit categories that don't apply.
+
+**Verify every entry before you write it.** Run a command that proves each fact,
+and record the file and line. Write nothing from memory or from the existing
+documentation — the docs are what we're correcting. Where the repo's own prose
+is authoritative (a support matrix, a compatibility statement), anchor to it and
+say so.
+
+**Anchor contract — enforced, non-negotiable.** Every fact anchors:
+
+- `src: <path>:<line>` or `<path>:<start>-<end>`
+- `match:` — the exact string that appears at that line (defaults to the value)
+- `src_files: [<path>, …]` when the fact is established by a file *existing*
+  rather than by its contents
+- `near:` — a string on the owning line, when `match` can't be unique in its file
+
+**No anchor, no entry.** If you can't prove it, leave it out: git2docs
+re-resolves every anchor at generation time and drops any that no longer verify,
+so an unanchored fact never grounds.
+
+**Discipline.** Facts, not prose — exact strings and values only, no
+architecture and no explanations. Add a short `note:` only where getting the
+fact wrong has a specific consequence worth naming. Prefer stable facts;
+something that changes every release is a bad entry. Small is correct — each
+section is a standing signal that an extractor is missing, so this file should
+*shrink* as extraction improves.
+
+**Finish.** The only file you create is `docs/docsync-context.yaml`. Do **not**
+add a checker script or a Makefile target: drift-guarding and re-anchoring are
+git2docs' job, not per-repo scripts — the server re-resolves every anchor at
+generation time, and `verify_facts` is the CI drift-guard once MCP is connected.
+Report how many facts you anchored, and which categories you left out because
+git2docs already extracts them.
+
+> Same canonical text git2docs serves from `get_facts`. Keep it in sync with
+> `DOCSYNC_CONTEXT_FACTS_PROMPT` (`packages/db/src/onboarding.ts` in the git2docs
+> repo).
+
 ## One-time setup
+
+Everything from here on talks to git2docs over MCP. If bootstrapping the facts
+file is all you were asked for, you're already done — skip this.
 
 1. In git2docs, **Settings → Access tokens** → create a token (`g2d_…`, shown
    once). Put it in an env var: `export GIT2DOCS_TOKEN=g2d_…`.
@@ -232,8 +315,9 @@ guard, and the server re-resolves match-first at gen time regardless. Re-running
 this each release keeps facts current; a moved line is auto-re-anchored, and only
 a genuinely-deleted match needs your attention.
 
-If `get_facts` returns nothing, it hands back the canonical authoring prompt —
-use it to bootstrap `docs/docsync-context.yaml`.
+If `get_facts` returns nothing, the repo has no facts yet: bootstrap the file as
+described in *Bootstrap the anchored facts* above (`get_facts` hands back the
+same canonical text, so either source works once you're connected).
 
 ## Raise the input, not just the output (repo health)
 
@@ -277,6 +361,11 @@ pages and hints; `docsync-context` config is just the durable backing that makes
 the split survive regens.
 
 ## Rules
+
+- **Bootstrap needs no connection.** If you were asked only to create
+  `docs/docsync-context.yaml`, author it from the checkout and stop. Don't set
+  up MCP, don't check out a release commit, don't open a validation session —
+  none of the rules below apply to that job.
 
 - **Structure before findings.** Before recommending a regen or filing content
   findings, sanity-check the TOC: an overloaded page (many subjects / very long /
