@@ -243,10 +243,11 @@ Using the right channel is the whole game — don't collapse everything into
   reason })`** rather than leaving it open.
 - **A finding already satisfied by the current docs** (a prior finding that a
   regen or repo fix has since addressed) → `dismiss_finding({ finding_id, reason })`.
-  `list_findings` shows the open set (yours + the maintainer's). Dismiss ONLY
-  after re-verifying the page against the code **this pass** — not to look
-  converged; a maintainer can reopen it. Keeping the set clean means a later
-  blanket Apply doesn't re-push moot (or stale) patches.
+  `list_findings` shows the live set (yours + the maintainer's), each with a
+  `status`. Dismiss ONLY after re-verifying the page against the code **this
+  pass** — not to look converged; a maintainer can reopen it. Keeping the set
+  clean means a later blanket Apply doesn't re-push moot (or stale) patches.
+  **Never dismiss an `applied` finding** (below) — it is accepted, not fixed.
 
 ## Resolve git2docs' own structural checks (Tier-0)
 
@@ -352,6 +353,9 @@ re-hint**:
 
 1. **Split** — `propose_toc_change({ action: 'add', title, parent_page_slug, … })`,
    one focused subpage per distinct subject (one per option / mode / component).
+   An added page is created **ungenerated**, with no source hints — which is why
+   step 2 is not optional. Generating it before hinting it would ground the page
+   on a keyword guess.
 2. **Re-hint** — `add_source_hints({ space_slug, page_slug, hints })` on each
    subpage, pointing at *that subject's* code/config, not the whole area.
 3. **Then** regenerate. Each focused page grounds cleanly — one regen replaces a
@@ -361,6 +365,40 @@ Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
 hints — BEFORE** you recommend a regen or start filing content findings. Work in
 pages and hints; `docsync-context` config is just the durable backing that makes
 the split survive regens.
+
+## `applied` means accepted, NOT fixed
+
+Applying is two acts now, and the gap between them is where an agent goes wrong.
+
+`report_finding` → the maintainer reviews and **applies** → the finding becomes
+**`applied`**: the correction is written into the brief, and **nothing has been
+regenerated**. The page still reads exactly as it did when you filed the
+finding. Only when the maintainer runs a regeneration does the fix get written
+and the finding resolve.
+
+`list_findings` returns these alongside open ones, with `status` on each and
+`open_count` / `applied_not_regenerated` split out. `get_status` reports the
+same count.
+
+So, on an `applied` finding:
+
+- **Do not re-report it.** `report_finding` does not deduplicate — you will
+  create a second copy of a finding that is already accepted.
+- **Do not dismiss it.** Dismissing is for a finding the docs already satisfy.
+  This one they do not; it is waiting on work.
+- **Do not read the open count as convergence.** Zero open with findings still
+  applied means nothing has been fixed yet.
+- **Do not end the pass `clean`.** `end_validation` refuses it, for the same
+  reason it refuses while a regeneration is in flight.
+
+If a pass finds everything already applied, end with `incomplete` and say the
+release is waiting on a regeneration. Re-validate after it runs.
+
+The same applies to **anchored facts**: `get_status` reports
+`facts_awaiting_commit` — facts you captured that are not yet in
+`docs/docsync-context.yaml`, so they are grounding nothing yet. A page that
+depends on one will still be wrong until the maintainer commits it AND
+regenerates.
 
 ## Before lock: does anything here not belong in public?
 
@@ -427,6 +465,11 @@ the latter will stop looking — which leaves them worse off than if you had nev
 checked.
 
 ## Rules
+
+- **`applied` is not fixed.** A finding the maintainer applied is accepted and
+  waiting on a regeneration; the page still reads as it did. Never re-report it,
+  never dismiss it, never count the remaining open set as convergence, and never
+  end the pass `clean` over one.
 
 - **Never send suspect content to git2docs.** If a page exposes something
   private, name the page, the section and the KIND of thing in your summary —
