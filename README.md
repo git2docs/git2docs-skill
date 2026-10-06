@@ -25,6 +25,12 @@ enrichment back.
   and kept current as the code moves.
 - **Input fidelity** — repo doc-readiness gaps (missing docstrings, untyped
   signatures, unextractable schemas) that make the docs thin or fabricate.
+- **Nothing published that shouldn't be** — before a release is locked, the
+  published pages are reviewed for content that was never meant to be public:
+  internal hostnames and IPs, customer identifiers, internal URLs, test
+  credentials. Findings are reported **to you, locally** — the suspect value is
+  never sent to git2docs. This is a judgement pass over rendered prose, not a
+  security review, and it does not replace one.
 
 Findings you file become comments on the relevant doc section and flow into
 git2docs' review → apply loop. Facts flow into `docs/docsync-context.yaml` and

@@ -9,7 +9,9 @@ description: >-
   strings no extractor can derive, and flag git2docs product gaps. Also use it to
   author docs/docsync-context.yaml for the FIRST time, before a repo has ever been
   generated — that bootstrap reads only the repo and needs no git2docs account,
-  token or MCP connection. Everything else runs through the git2docs MCP.
+  token or MCP connection. Before a release is locked, also review the published
+  pages for anything that was never meant to be public. Everything else runs
+  through the git2docs MCP.
 ---
 
 # git2docs — validate your docs and keep them true to the code
@@ -360,7 +362,77 @@ hints — BEFORE** you recommend a regen or start filing content findings. Work 
 pages and hints; `docsync-context` config is just the durable backing that makes
 the split survive regens.
 
+## Before lock: does anything here not belong in public?
+
+Run this once, on the pass before the maintainer locks or publishes a release.
+It is the last cheap moment — a published page is much harder to unpublish than
+to never publish.
+
+**The question is about the PAGES, not the repo.** You are not scanning the
+repository for secrets; that is a different job, it is unbounded, and tools like
+`gitleaks` already do it. You are asking a bounded question you are uniquely
+placed to answer, because you hold both halves: **is everything on this
+published page grounded in something that was meant to be published?**
+
+Work from `list_pages` / `get_page`, and for anything that looks wrong, check
+what it was grounded in (`source_hints`, `get_page_claims`). Things that are
+fine in a repo and wrong on a public docs site:
+
+- internal hostnames, lab or management IPs, cluster endpoints
+- credentials of any kind, including ones that are "only" for a test rig
+- a customer's name, tenant/project IDs, UUIDs, or support-case numbers
+- internal URLs — a wiki, a ticket, a build server, an S3 bucket
+- employee names and email addresses in examples
+- licence keys, tokens, registry credentials
+
+The grounding question usually settles it faster than reading the prose. A page
+grounded in `docs/customer/`, an internal runbook, or a deployment scratch file
+is suspect by construction, whatever it happens to say today. (git2docs no
+longer reads agent instruction files — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`
+— at all, so that particular source is already closed.)
+
+### Report it WITHOUT repeating it
+
+**Never put the suspect string in a `report_finding`, a `report_fact`, a
+`direct_edit`, or any other call.** Those are stored by git2docs. Sending the
+secret to a server is the outcome this check exists to prevent, and doing it
+through the tool meant to prevent it is worse than not checking at all.
+
+Report to the maintainer, in your summary, in their terminal:
+
+- which page and section
+- **what kind** of thing it looks like ("a management IP", "what appears to be a
+  test credential") — never the value
+- what it was grounded in, so they can fix the source
+
+If you file anything with git2docs at all, it carries the location and the
+reason only.
+
+### Fix the source, not the page
+
+Same rule as everywhere else: a doc edit is overwritten by the next
+regeneration. The durable fixes, in order — remove the content from the repo,
+re-ground the page with `add_source_hints` / `remove_source_hints` so it stops
+reading that file, or have the maintainer exclude the directory in git2docs.
+
+### What you must not claim
+
+**This is not a security review and does not replace one.** You are reading
+rendered prose with judgement, not auditing a system.
+
+So never report that a release is clean, free of private data, or safe to
+publish. Report only what you found. "I did not find anything" is a statement
+about your attention, not about the release, and a maintainer who reads it as
+the latter will stop looking — which leaves them worse off than if you had never
+checked.
+
 ## Rules
+
+- **Never send suspect content to git2docs.** If a page exposes something
+  private, name the page, the section and the KIND of thing in your summary —
+  never the value, and never in a `report_finding`, `report_fact` or
+  `direct_edit`. Those are stored server-side; repeating the secret there is the
+  very thing the check exists to prevent.
 
 - **Bootstrap needs no connection.** If you were asked only to create
   `docs/docsync-context.yaml`, author it from the checkout and stop. Don't set

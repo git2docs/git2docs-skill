@@ -1,7 +1,7 @@
 {
   "name": "git2docs-skill",
-  "description": "Validate your git2docs-generated documentation against your actual code and runtime, file findings, and author or keep current the repo's anchored facts (docs/docsync-context.yaml) \u2014 the bootstrap needs no git2docs account.",
-  "version": "1.6.0",
+  "description": "Validate your git2docs-generated documentation against your actual code and runtime, file findings, author and maintain the repo's anchored facts, and review published pages for content that was never meant to be public.",
+  "version": "1.7.0",
   "author": {
     "name": "Git2Docs",
     "email": "support@git2docs.com",
