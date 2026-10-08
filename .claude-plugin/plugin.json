@@ -1,7 +1,7 @@
 {
   "name": "git2docs-skill",
   "description": "Validate your git2docs-generated documentation against your actual code and runtime, file findings, author and maintain the repo's anchored facts, and review published pages for content that was never meant to be public.",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "author": {
     "name": "Git2Docs",
     "email": "support@git2docs.com",

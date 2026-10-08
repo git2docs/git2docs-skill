@@ -95,6 +95,37 @@ something that changes every release is a bad entry. Small is correct — each
 section is a standing signal that an extractor is missing, so this file should
 *shrink* as extraction improves.
 
+**Release lineage — only if this repo has more than one release line.** git2docs
+diffs each release against the one it synced previously. That is the right base
+for a project that releases in a straight line, and wrong in the worst direction
+for one that maintains release branches: ship 2.1.0, then back-port 1.4.3, and
+1.4.3 is compared against 2.1.0, so every API added across 2.x is published as a
+**removal** in the 1.4.3 release notes. Nothing git2docs can see distinguishes
+the two cases — it clones `--depth=1` at the tag, so it has neither the history
+nor the sibling tags — and version numbers alone don't settle it either. You
+have the repository, so you are the only party who can answer it.
+
+Add a `releases:` block for each release whose predecessor is not simply the one
+before it in time:
+
+```yaml
+releases:
+  v2.1.0:
+    predecessor: v2.0.4
+  v1.4.3:
+    predecessor: v1.4.2   # maintenance back-port on the 1.4.x branch
+  v1.0.0:
+    first: true           # nothing predates this one
+```
+
+These are **not** anchored facts — they describe branch history, not a string in
+a file, so the anchor contract above doesn't apply to them. Read the lineage
+from the repository (`git log --graph --tags`, `git merge-base`, the branch
+layout), never from the version numbers. **Omit the block entirely when releases
+are linear:** an absent block means "use the default", which is already right
+there, and a block written from version order alone would replace a default
+that works with a guess that looks authoritative.
+
 **Finish.** The only file you create is `docs/docsync-context.yaml`. Do **not**
 add a checker script or a Makefile target: drift-guarding and re-anchoring are
 git2docs' job, not per-repo scripts — the server re-resolves every anchor at
@@ -476,6 +507,13 @@ checked.
   never the value, and never in a `report_finding`, `report_fact` or
   `direct_edit`. Those are stored server-side; repeating the secret there is the
   very thing the check exists to prevent.
+
+- **Only you can see the branch history.** git2docs clones `--depth=1` at the
+  release tag, so it diffs against whatever it synced last. If this repo has
+  more than one release line, declare `releases:` in
+  `docs/docsync-context.yaml` — read from the graph, never from version order.
+  If releases are linear, declare nothing: the default is already right, and a
+  guess written to look authoritative is worse than no entry.
 
 - **Bootstrap needs no connection.** If you were asked only to create
   `docs/docsync-context.yaml`, author it from the checkout and stop. Don't set
