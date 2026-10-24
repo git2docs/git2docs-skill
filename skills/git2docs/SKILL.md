@@ -278,6 +278,14 @@ Using the right channel is the whole game — don't collapse everything into
   defaults, versions — fix the ground instead, or the section stops following the
   code. Confirm with the user. `reset_ownership` hands the section back to regen;
   **`list_frozen_sections`** is the register of every freeze you have made.
+  **It closes the findings it was approved for.** A finding the maintainer
+  approved for direct edit (`approved_for_edit: true` on `list_findings`)
+  resolves when your edit lands — a frozen section can never be reached by the
+  regeneration that would otherwise close it. Findings on that section that were
+  **not** approved stay open and come back in the tool's response: the freeze
+  puts them out of reach of every other mechanism, so tell the maintainer
+  instead of leaving them to rot. If your edit did not in fact fix an approved
+  finding, file it again rather than let it stand closed.
 - **git2docs itself can't get you the right outcome** (config can't express X, a
   whole surface can't be extracted, a diagram can't represent the topology) →
   `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
@@ -293,6 +301,9 @@ Using the right channel is the whole game — don't collapse everything into
   pass** — not to look converged; a maintainer can reopen it. Keeping the set
   clean means a later blanket Apply doesn't re-push moot (or stale) patches.
   **Never dismiss an `applied` finding** (below) — it is accepted, not fixed.
+  **Never dismiss a finding your own `direct_edit` fixed, either.** Dismissal
+  records that the finding was WRONG, which erases the fix from the history;
+  the edit closes it on its own once the maintainer has approved it.
 
 ## Resolve git2docs' own structural checks (Tier-0)
 
