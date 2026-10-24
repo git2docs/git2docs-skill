@@ -113,8 +113,8 @@ Everything below needs a git2docs account.
 - **Report:** `report_finding` (section or coverage-gap module),
   `report_fact` / `get_facts` (anchored facts → `docs/docsync-context.yaml`),
   `propose_toc_change`, `report_product_gap`
-- **Enrich:** `add_source_hints`, `add_section`, `set_guidance`,
-  `direct_edit` (last resort), `reset_ownership`
+- **Enrich:** `add_source_hints`, `remove_source_hints`, `add_section`,
+  `set_guidance`, `direct_edit`, `reset_ownership`, `list_frozen_sections`
 - **Input fidelity:** `get_repo_health`, `list_health_gaps`
 
 ## License

@@ -172,6 +172,13 @@ comparing anything to code:
 2. **`get_status`** — confirm it isn't mid-regeneration (`generating: false`) and
    read the commit its docs were generated/validated against.
 3. **`git checkout <generated_at_commit or tag>`** in your local repo.
+4. **`list_frozen_sections`** — every section an earlier `direct_edit` froze
+   (`agent_owned`). Those sections are no longer regenerated from code, so they
+   are the one place staleness **cannot** be found by reading the code against
+   the docs: the code moved, the docs didn't. Check each against its
+   `code_evidence` and `reset_ownership` the ones whose source has changed.
+   Freezes outlive your session — this register is the only record of them, so
+   read it rather than keeping your own list.
 
 Validating against a different commit produces false findings. `get_page`,
 `get_page_claims`, and `get_status` all take an optional `version` — pass the
@@ -200,7 +207,10 @@ not inferred from silence.
      and grounding signals. If a page makes code claims but `grounded_in_code` is
      `false` (its hints are all prose — README/design docs) or
      `grounding_confidence` is low, **re-ground** it (`add_source_hints`) rather
-     than only filing findings.
+     than only filing findings. Read **`unresolved_source_hints`** before
+     anything else on the page — those hints ground nothing, so the page was
+     written without the code it names (see **Dead source hints** below). Clear
+     them before you spend the pass filing findings about what it says.
    - **Verify against ground truth** — the part only you can do: run each
      documented CLI command (`--help` or a safe/dry-run invocation) and compare
      flags/args/output; check each API endpoint's route/method/params/response
@@ -258,12 +268,16 @@ Using the right channel is the whole game — don't collapse everything into
   four are config-backed, so an Applied change **survives full regens** (a real
   missing code-derived page is better as a coverage-gap `report_finding`, which
   generates the page grounded in code).
-- **A correct claim the generator simply can't be made to produce** →
-  `direct_edit({ section_id, new_text, code_evidence })` — **last resort**. It
-  freezes the section `agent_owned`; regen never overwrites a frozen section
-  (freeze is absolute), so use it only after a finding has survived the
-  regenerate/apply loop, and confirm with the user. To let regen own it again,
-  call `reset_ownership` first.
+- **A small, settled error on a page that is otherwise right — or a claim the
+  generator can't be made to produce** → `direct_edit({ section_id, new_text,
+  code_evidence })`. It freezes the section `agent_owned`, and regen never
+  overwrites a frozen section (freeze is absolute). It is **not** a privilege you
+  have to earn by burning a regeneration first: see **Choosing between a
+  regeneration and a direct edit** for when it is simply the cheaper instrument.
+  Never use it on anything the **code** decides — flags, signatures, endpoints,
+  defaults, versions — fix the ground instead, or the section stops following the
+  code. Confirm with the user. `reset_ownership` hands the section back to regen;
+  **`list_frozen_sections`** is the register of every freeze you have made.
 - **git2docs itself can't get you the right outcome** (config can't express X, a
   whole surface can't be extracted, a diagram can't represent the topology) →
   `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
@@ -396,6 +410,87 @@ Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
 hints — BEFORE** you recommend a regen or start filing content findings. Work in
 pages and hints; `docsync-context` config is just the durable backing that makes
 the split survive regens.
+
+## Dead source hints
+
+`get_page` returns **`unresolved_source_hints`**: hints on that page that
+resolved to nothing when it was last generated. They still appear in
+`source_hints` because they were pinned — git2docs won't delete a deliberate pin
+over one bad run — but they ground nothing, so **the page was written without
+the code it names**. A page whose only code hints are dead also reports
+`grounded_in_code: false` even while `grounding_confidence` reads high:
+confidence means grounding happened, not that it grounded in code.
+
+This is worse than a missed opportunity. A hint whose *name* implies an API
+invites the synthesizer to supply what the name implies — a dead `api/routes.py`
+doesn't merely fail to help, it suggests routes to invent. **Dead hints are a
+fabrication source.**
+
+**Clear them before filing content findings on that page.** A finding about an
+invented claim whose cause is a dead hint comes back after the regeneration, in
+new wording.
+
+For each one, decide which it is:
+
+1. **Wrong path, right intent** — the file moved, or the path was mistyped.
+   `remove_source_hints` the dead one, `add_source_hints` the real path.
+2. **The file is gone** — remove it, and point the page at whatever grounds it
+   now. A page left with no code hints regenerates ungrounded.
+3. **A symbol rather than a file** — both `path/to/file.py::symbol` and dotted
+   `pkg.mod.Class.method` resolve. If a symbol you can see in the code still
+   won't resolve, it probably isn't extracted: that's `report_product_gap` (an
+   extractor limitation), not a hint to delete.
+4. **It never existed** — a conventional-looking path that was guessed rather
+   than read. Delete it, and don't replace a guess with another guess.
+
+Case 4 is worth noticing about your own work: a hint naming a file that was
+never in the repo is where convention got substituted for reading the code —
+the same failure you are checking the docs for.
+
+Hints are re-resolved only when a page is generated, so the list reflects the
+last run: a hint you fixed still reads as dead until the next regeneration.
+
+## Choosing between a regeneration and a direct edit
+
+A regeneration is **all-or-nothing per page**: it rewrites every unfrozen
+section on every page it touches, not only the sections carrying findings. That
+one fact decides this.
+
+- Its **benefit** scales with the findings a run can fix.
+- Its **damage** scales with the correct sections it re-rolls, some of which come
+  back wrong.
+
+Early in a pass the benefit dominates: findings share a root cause — a bad source
+hint, a missing fact, an overloaded page, a page grounded in prose instead of
+code — so one input fix plus one run clears many at once. **Regenerate**, and fix
+every input in the same batch.
+
+Later it inverts. What is left is a handful of small, unrelated errors on pages
+whose other sections are right today, and another run puts all of them back in
+play. This is why a pass can stop converging no matter how many times you
+regenerate: the count isn't falling because roughly as many new errors are minted
+each run as are fixed. **`direct_edit` is the cheaper instrument from that point
+on** — fix the sentence, leave everything correct alone.
+
+`list_findings` returns **`regeneration_exposure`** so this is arithmetic rather
+than a feeling: how many sections a run would rewrite (`sections_rewritten`)
+against how many carry findings (`sections_with_findings`), over how many pages.
+When the first number is several times the second **and** the findings have no
+common cause, stop regenerating and edit.
+
+Two cases justify a direct edit on their own — neither needs a regeneration
+first to prove it:
+
+1. **Small, local, settled** — a wrong default, one bad line in an example, a
+   stale sentence, where the rest of the page is correct.
+2. **Shown to be underivable** — a finding was applied, the regeneration ran, and
+   the same error came back in new wording.
+
+You are the author now, so write the text as carefully as you'd check the
+generator's: verify it against the code before you save it, and cite that code in
+`code_evidence`. The cost is that a frozen section stops following the code, so
+never freeze anything the code decides, and read `list_frozen_sections` at the
+start of a pass on a new release.
 
 ## `applied` means accepted, NOT fixed
 
