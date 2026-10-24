@@ -112,6 +112,8 @@ Everything below needs a git2docs account.
 - **Read / verify:** `get_page`, `get_page_claims`, `list_coverage_gaps`
 - **Report:** `report_finding` (section or coverage-gap module),
   `report_fact` / `get_facts` (anchored facts → `docs/docsync-context.yaml`),
+  `list_learned_facts` (what git2docs learned from applied findings — audit it,
+  nothing else re-checks it),
   `propose_toc_change`, `report_product_gap`
 - **Enrich:** `add_source_hints`, `remove_source_hints`, `add_section`,
   `set_guidance`, `direct_edit`, `reset_ownership`, `list_frozen_sections`

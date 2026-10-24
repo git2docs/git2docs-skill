@@ -378,6 +378,36 @@ If `get_facts` returns nothing, the repo has no facts yet: bootstrap the file as
 described in *Bootstrap the anchored facts* above (`get_facts` hands back the
 same canonical text, so either source works once you're connected).
 
+### Audit the LEARNED facts too — nothing else does
+
+Anchored facts are half of what grounds synthesis. The other half is what
+git2docs **learned** from findings the maintainer applied: one sentence per
+correction, written by a model, stored per repo. **`list_learned_facts`** lists
+the live set with the finding each came from (`dimension` / `contains` narrow
+it; `offset` pages).
+
+Treat these as claims to check, not as settled truth:
+
+- Nothing re-checks them. `verify_facts` covers anchored facts only; a learned
+  fact is never resolved against code, at any point, ever.
+- **An applied finding is one the maintainer ACCEPTED, not one that is true.**
+  They accepted it on the evidence they had, which may since have been shown
+  wrong.
+- **One live fact per key is guaranteed; one per SUBJECT is not.** A correction
+  filed under a *new* key leaves the old, wrong fact live beside it, and both
+  reach the generator. Facts on one subject under different keys are the thing
+  to look for. One repo had five live facts on a single behaviour, one of them
+  contradicting the repo's own anchored facts, and the pages on that subject
+  came back wrong pass after pass — including after the anchored facts were
+  right.
+
+So when a page keeps regressing on a subject your anchored facts already cover,
+read the learned facts before re-deriving anything. Report a wrong or
+contradicted one to the maintainer **with its key**; retiring it is their
+decision, and there is no tool that lets you do it yourself. An anchored fact
+you add on the same subject is the durable fix, but it does not remove the
+learned one.
+
 ## Raise the input, not just the output (repo health)
 
 Code-derived docs can only be as good as the code is legible.
