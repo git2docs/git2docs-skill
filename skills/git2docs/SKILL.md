@@ -224,10 +224,12 @@ not inferred from silence.
 4. **`list_coverage_gaps`** — undocumented public modules (your sufficiency
    checklist). For a gap git2docs should document, `report_finding({ module, … })`.
 
-5. **`end_validation({ session_id, verdict })`** — `clean` (checked, nothing to
-   fix), `findings_filed`, or `incomplete` (stopped early). This is what tells
-   git2docs the pass is complete. A `clean` verdict is refused while a
-   regeneration is in flight.
+5. **`end_validation({ session_id, verdict, recommendation, recommendation_reason })`**
+   — `verdict` is your call on the PASS: `clean` (checked, nothing to fix),
+   `findings_filed`, or `incomplete` (stopped early). A `clean` verdict is
+   refused while a regeneration is in flight. `recommendation` is your call on
+   the RELEASE — see **Concluding the loop**. Both are required; they are
+   different judgements and the second is the one the maintainer acts on.
 
 ## Choosing the right channel
 
@@ -567,6 +569,79 @@ The same applies to **anchored facts**: `get_status` reports
 depends on one will still be wrong until the maintainer commits it AND
 regenerates.
 
+## Concluding the loop
+
+**You are the one who decides when this release is done. Nobody else can.**
+
+The maintainer is watching a four-step panel in their browser. You cannot see
+it. They cannot see what you saw — which pages you read, which commands you
+ran, which of the remaining findings are cosmetic. So when you stop without
+saying whether the release is finished, the panel sits on "Waiting", they have
+nowhere to go, and the only move left to them is to ask you whether you are
+done. That is a question only you can answer and you have already stopped
+answering. Both of you then wait for the other.
+
+So **every `end_validation` carries a `recommendation`**, which is your call on
+the RELEASE, as distinct from `verdict`, which is your call on the pass:
+
+| `recommendation` | means |
+|---|---|
+| `lock` | Nothing further is worth doing. Freeze it. |
+| `regenerate` | Fixes are staged (applied findings, committed facts) and need a run. |
+| `keep_validating` | You are not finished — more passes to come. |
+| `blocked` | You need the maintainer before you can continue. |
+
+`recommendation_reason` is one line and is **required**, because it is rendered
+to the maintainer verbatim as their next step. "Nothing further is worth doing"
+is not a reason; "three cosmetic wording findings remain, all on pages whose
+other sections are correct — another regeneration would re-roll 40 correct
+sections to fix three sentences" is.
+
+### Two things justify `lock`
+
+1. **A pass found nothing new.** You checked and there was nothing to file.
+2. **What is left is not worth the cost.** This is the judgement the
+   `regeneration_exposure` arithmetic above is FOR, and it is yours to make.
+   Minor findings on an otherwise-correct page do not have to be fixed before a
+   release is locked — they have to be *weighed*. Say what is left, say why you
+   are not spending a regeneration on it, and recommend `lock`. A release held
+   open for three wording nits while 40 correct sections sit at risk of being
+   re-rolled is the worse outcome, and the maintainer is relying on you to say
+   so.
+
+You may recommend `lock` with a `findings_filed` verdict. The two are
+independent: you filed findings AND you think none of them is worth acting on
+before this release ships. That combination is common and honest. What is not
+honest is manufacturing a `clean` pass to make the panel advance — see below.
+
+### Never mint a pass to move the UI
+
+If the maintainer tells you the panel says "Waiting", **do not open a session
+and close it to clear the state.** A session that examines nothing and declares
+`clean` puts a zero on their convergence chart that means nothing, and
+`pages_checked` is now computed from what you actually recorded, so it will read
+0 and say so.
+
+What to do instead: read `get_status`. It now returns `converged` and a
+`maintainer_next_action` telling you exactly what the panel is showing and whose
+move it is. If the move is theirs, say so in your summary. If it is yours, make
+it. If you have genuinely finished and only the declaration is missing, that is
+a real `end_validation` with a real recommendation — not a new pass.
+
+If you have already checked everything and nothing has changed since, you do
+not need to re-check it: an examination stays valid while the section's text is
+unchanged, so coverage carries forward on its own. Say "coverage carried
+forward from the pass at `<commit>`" in your note rather than restating it as
+this pass's work.
+
+### Say it in the terminal too
+
+The maintainer reads your summary, not the database. End every pass by telling
+them, in their terminal, in one or two sentences: what you concluded, and the
+single next thing for them to do — lock, regenerate, apply findings, or nothing.
+If `maintainer_next_action` says the move is theirs, that sentence is the most
+useful thing in your whole summary.
+
 ## Before lock: does anything here not belong in public?
 
 Run this once, on the pass before the maintainer locks or publishes a release.
@@ -631,6 +706,13 @@ about your attention, not about the release, and a maintainer who reads it as
 the latter will stop looking — which leaves them worse off than if you had never
 checked.
 
+**This rule is about PRIVACY, and only privacy.** It does not stop you
+concluding the loop. You can and must still say whether the documentation is
+accurate enough to lock — that judgement is grounded in pages you read against
+code you ran, and it is the whole point of the pass. What you must not do is
+let a maintainer hear "no secrets found" as "audited and safe to publish". Keep
+the two statements apart in your summary and make both.
+
 ## Rules
 
 - **`applied` is not fixed.** A finding the maintainer applied is accepted and
@@ -685,7 +767,20 @@ checked.
   shows the set). Applying a moot finding wastes a regen, and a stale correction
   written to the brief/facts persists — so dismiss, don't blanket-Apply.
 - **Close the session.** Always `end_validation` with a verdict; use `clean` only
-  when no regeneration is in flight.
+  when no regeneration is in flight. Never open a session just to change what
+  the maintainer's panel says.
+
+- **Conclude the loop.** Every `end_validation` carries a `recommendation` and a
+  one-line reason — `lock`, `regenerate`, `keep_validating` or `blocked`. You are
+  the only party who has read the docs against the code, so the call is yours and
+  nobody can make it for you. "What is left is minor and not worth a
+  regeneration" is a legitimate, expected reason to recommend `lock`; say what is
+  left and why you are not spending a run on it.
+- **Tell them the next move.** Finish your terminal summary with the single
+  thing the maintainer should do now — lock, regenerate, apply findings, or
+  nothing. `get_status` returns `maintainer_next_action`; they cannot see it and
+  you can.
+
 - **Summarize at the end**, ordering the recommendation by durability: repo fixes
   and facts first, **then** Apply. Include: version validated, pages checked,
   findings filed (by kind), facts added/re-anchored, coverage and repo-health gaps
