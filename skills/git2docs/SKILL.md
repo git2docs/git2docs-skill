@@ -263,13 +263,28 @@ Using the right channel is the whole game — don't collapse everything into
 - **Structure is wrong** → `propose_toc_change({ action, … })` — a human-gated
   proposal that lands on the Findings page; it never changes published docs
   directly. Actions: `rename` (`page_slug` + `new_title`), `remove` (`page_slug`),
-  `add` (`title` [+ `doc_type`]; pass `parent_page_slug` to nest it as a
-  **subpage** under a top-level page, one level deep), `reorder` (`page_slugs` —
-  the desired order of a set of siblings: all top-level, or all children of one
-  parent). Identify pages by `space_slug` + `page_slug` from `list_pages`. All
-  four are config-backed, so an Applied change **survives full regens** (a real
-  missing code-derived page is better as a coverage-gap `report_finding`, which
-  generates the page grounded in code).
+  `add` (`title` [+ `section_id` **or** `doc_type`]; pass `parent_page_slug` to
+  nest it as a **subpage** under a top-level page, one level deep), `reorder`
+  (`page_slugs` — the desired order of a set of siblings: all top-level, or all
+  children of one parent). Identify pages by `space_slug` + `page_slug` from
+  `list_pages`. All four are config-backed, so an Applied change **survives full
+  regens** (a real missing code-derived page is better as a coverage-gap
+  `report_finding`, which generates the page grounded in code).
+
+  **If the page you want is one of the standard sections, say so with
+  `section_id`** — `release_notes`, `troubleshooting`, `cli_reference`,
+  `api_reference`, `getting_started`, `architecture`, `key_concepts`,
+  `intended_audience`, `problem_statement`, `alternatives`,
+  `advanced_deployments`, `ui_guide`, `automation`, `ecosystem_integration`.
+  The page is then built the way git2docs builds that section: its own doc type,
+  its own section structure, its own sources. For `release_notes` that is the
+  difference between a page composed from the repo's changelog, the release body
+  and the commit range, and a page that reads as another guide — the title alone
+  does not decide it, so a page you call "What's new in 2.1" without
+  `section_id` is a guide. Omit `section_id` for a page that is genuinely
+  product-specific ("Upgrading from 1.x", "Air-gapped install"); the tool tells
+  you if an id isn't one it knows, and `release_notes` is refused on a branch
+  cohort because release notes belong to a tagged release.
 - **A small, settled error on a page that is otherwise right — or a claim the
   generator can't be made to produce** → `direct_edit({ section_id, new_text,
   code_evidence })`. It freezes the section `agent_owned`, and regen never
