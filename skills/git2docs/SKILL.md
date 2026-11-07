@@ -217,6 +217,12 @@ not inferred from silence.
      against the code; check config keys, env vars, and defaults where they're
      read; compile/run examples; judge architecture/concept/workflow prose
      against how the system actually works (read the code, don't guess).
+   - **`record_section_checked({ section_id, … })`** — record each section the
+     moment you finish it, whether or not it produced a finding. This is the
+     ONLY thing that counts as having read it: `pages_checked` is computed from
+     these records, and a section with none is treated as unexamined no matter
+     how carefully you read it. Record as you go, not in a batch at the end — a
+     pass that dies mid-way keeps the coverage it earned.
 
 3. Report through the **right channel** (see the guide below) — including
    **anchored facts** for exact strings no extractor grounds.
@@ -224,10 +230,20 @@ not inferred from silence.
 4. **`list_coverage_gaps`** — undocumented public modules (your sufficiency
    checklist). For a gap git2docs should document, `report_finding({ module, … })`.
 
+   **`sample_unvalidated_sections`** — what is still unexamined, drawn without
+   bias. Reach for it when a product is too large to read end to end, or near
+   the end of a pass to see what you skipped. Working from your own sense of
+   what matters samples the pages you already trust.
+
 5. **`end_validation({ session_id, verdict, recommendation, recommendation_reason })`**
    — `verdict` is your call on the PASS: `clean` (checked, nothing to fix),
    `findings_filed`, or `incomplete` (stopped early). A `clean` verdict is
-   refused while a regeneration is in flight. `recommendation` is your call on
+   refused while a regeneration is in flight, **and while any regenerable
+   section has no examination on record** — "clean" claims the docs are right,
+   and a section nobody read supports no such claim. If you are refused for
+   that reason you have not been blocked; you have been told what is left.
+   Either read it and `record_section_checked`, or close the pass as
+   `findings_filed` / `incomplete`, which is what it is. `recommendation` is your call on
    the RELEASE — see **Concluding the loop**. Both are required; they are
    different judgements and the second is the one the maintainer acts on.
 
@@ -303,6 +319,21 @@ Using the right channel is the whole game — don't collapse everything into
   puts them out of reach of every other mechanism, so tell the maintainer
   instead of leaving them to rot. If your edit did not in fact fix an approved
   finding, file it again rather than let it stand closed.
+- **Confirmed-correct editorial content a rewrite keeps dropping** — a caveat,
+  an ordering constraint, a "why" that isn't derivable from code →
+  `set_guidance({ space_slug, page_slug, guidance })`. A short anchor the
+  generator **must not contradict** on any future regen, so unlike a finding it
+  survives a full regeneration. NOT for code facts (that's `report_fact`) and
+  NOT for defects (that's `report_finding`). Empty string clears it.
+- **A page carrying boilerplate it should not have** — install steps on a
+  reference page, a troubleshooting list invented for a page with no failure
+  modes → `omit_page_sections({ space_slug, page_slug, sections })`. Use the
+  `section_type` values `get_page` reports. Re-deriving the same wrong section
+  across many pages turns one mistake into one finding per page; switch it off
+  once instead of filing it repeatedly.
+- **A page whose table-of-contents summary misdescribes its scope** →
+  `set_page_description({ space_slug, page_slug, description })`. Reader-facing
+  text about what the page covers — not a constraint on the generator.
 - **git2docs itself can't get you the right outcome** (config can't express X, a
   whole surface can't be extracted, a diagram can't represent the topology) →
   `report_product_gap(...)` — goes to the git2docs team, not the customer's docs.
@@ -311,6 +342,17 @@ Using the right channel is the whole game — don't collapse everything into
   If a gap you filed no longer holds (the code changed, an extractor now covers
   it, or you mis-diagnosed it), retire it with **`retract_product_gap({ gap_id,
   reason })`** rather than leaving it open.
+
+  **A gap is a conversation, and your turn is real work.** When
+  `list_product_gaps`, `get_status` or `begin_validation` says a gap is
+  awaiting you, read it with **`get_product_gap({ gap_id })`** — the whole
+  thread, not the summary. The reply may name a capability that already ships,
+  correct your diagnosis, or ask something only you can answer. Answer with
+  **`reply_product_gap({ gap_id, message })`**: supply the evidence asked for,
+  confirm a fix worked, or say the diagnosis was wrong. It does not change the
+  gap's status; it hands the turn back. **Your words go to the maintainer who
+  owns this repo as well as to git2docs, so write them for both.** A gap left
+  waiting on you is a question nobody else can close.
 - **A finding already satisfied by the current docs** (a prior finding that a
   regen or repo fix has since addressed) → `dismiss_finding({ finding_id, reason })`.
   `list_findings` shows the live set (yours + the maintainer's), each with a
@@ -419,11 +461,69 @@ Treat these as claims to check, not as settled truth:
   right.
 
 So when a page keeps regressing on a subject your anchored facts already cover,
-read the learned facts before re-deriving anything. Report a wrong or
-contradicted one to the maintainer **with its key**; retiring it is their
-decision, and there is no tool that lets you do it yourself. An anchored fact
-you add on the same subject is the durable fix, but it does not remove the
-learned one.
+read the learned facts before re-deriving anything. An anchored fact you add on
+the same subject is the durable fix, but it does not remove the learned one.
+
+**`propose_fact_retraction({ retractions: [{ fact_key, whats_true, evidence,
+replacement? }] })`** files the case. It does not retire anything — retiring
+removes grounding the docs may rely on, so the maintainer decides and acts on
+it in their dashboard. The fact stays IN FORCE until they do, so say so if a
+page depends on it.
+
+- `evidence` is required: the `file:line` you read or the command you ran. A
+  retraction request without it is an opinion, and nothing can be done with it.
+- **`replacement` is what matters most, and it is optional only because some
+  facts deserve none.** Most wrong facts are wrong in ONE CLAUSE — true about
+  the behaviour, false about the error code, the default, the ordering.
+  Retiring those outright leaves the subject grounded by nothing, which is
+  worse than the error you removed. So send the corrected sentence, and write
+  it to stand ALONE: `whats_true` is for the maintainer to read and may argue
+  with the old fact ("the clause X is FALSE"); `replacement` is fed verbatim to
+  every future regeneration and must not mention the fact it replaces. Omit it
+  only when nothing should ground this subject at all.
+- Use it especially where several live facts describe ONE subject under
+  different keys. Only one can be right, and the others keep reaching the
+  generator beside it.
+
+### And the BRIEF — the third place an Apply writes
+
+An Apply writes in two places, not one. The learned fact above is the first.
+The second is the **product brief**, and it is the stronger of the two: the
+brief is rendered with **strict authority** in every page prompt, so one
+sentence in it outranks the repository on every page until someone removes it.
+Nothing re-checks it against the code, ever.
+
+**`list_brief_corrections`** is the register — every sentence an Apply wrote
+into the brief, with the finding it came from and the date it landed.
+
+**This is where a page that keeps coming back wrong usually lives.** When the
+code is right, the anchored fact is right, the extracted surface is right, and
+the page still repeats an old claim, read this list before re-deriving
+anything. A correction accepted months ago is still asserting it.
+
+Two shapes, and only one of them has a signal:
+
+- **Stale** — true when filed, overtaken by the code since. `contradicts_code`
+  (the correction names a CLI flag no command in the extracted surface
+  declares) and `source_changed` (a file its findings cited has changed by
+  content hash) both point here. Treat either as a pointer to READ, never a
+  verdict — neither knows whether the sentence is still true, and
+  `contradicts_code` is absent entirely unless the surface is complete, so its
+  silence proves nothing.
+- **Wrong from the start** — never true on any commit. No signal reveals this.
+  Only reading the finding against the code does, and that is your job.
+
+`still_in_force` says whether the current brief carries it verbatim. Retiring
+one is the maintainer's call — report the id, the text, and the code that
+contradicts it, and let them act.
+
+A worked example, because this one is easy to get half right: a correction
+pinned `current head: 022_add_reconcile_operation_type` into a deployment
+workflow. The head is 025 now. Retiring the correction restores what it
+replaced — `021` — which is also wrong. The fix was not to retire it but to
+edit the entry so it names no head at all: "apply any new Alembic migrations"
+is true forever, and naming the head guarantees the same bug next release.
+**When a correction pins a value that moves, the fix is to stop pinning it.**
 
 ## Raise the input, not just the output (repo health)
 
@@ -559,6 +659,15 @@ Applying is two acts now, and the gap between them is where an agent goes wrong.
 regenerated**. The page still reads exactly as it did when you filed the
 finding. Only when the maintainer runs a regeneration does the fix get written
 and the finding resolve.
+
+An Apply also writes in two places that outlive the page it fixed: a **learned
+fact** and a **brief correction**, both permanent until a maintainer removes
+them, neither re-checked against the code ever again. That is not a reason to
+withhold a real finding — it is the reason the channel order above exists. A
+repo fix or an anchored fact leaves nothing behind to go stale; a finding
+leaves two sentences that will still be asserting themselves next year. See
+**Audit the LEARNED facts** and **And the BRIEF** for what they look like once
+they have accumulated.
 
 `list_findings` returns these alongside open ones, with `status` on each and
 `open_count` / `applied_not_regenerated` split out. `get_status` reports the
