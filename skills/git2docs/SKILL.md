@@ -424,6 +424,14 @@ current:
      two up). Resolution then pins the fact to the occurrence nearest `near`, so
      it identifies one option and a rename drops it loudly instead of
      re-anchoring to the wrong one.
+   - **Name the pages a fact bears on**, on `report_fact` and in the file:
+     `pages: [configuration, cli-reference]` (slugs from `list_pages`). A fact
+     with no page scope goes into the prompt for *every* page and re-rolls
+     *every* page when it is committed — and a re-rolled page resamples most of
+     its checkable claims, so the examinations you just spent on the other
+     thirty pages are thrown away to deliver a fact those pages never mention.
+     Omit it only when you genuinely do not know: a wrong narrow list leaves a
+     page stale, which is worse than paying for breadth.
 4. Apply the set to `docs/docsync-context.yaml` (`facts:`) and open a PR the
    maintainer reviews. The next regeneration grounds every fact whose match
    still resolves.
@@ -462,7 +470,10 @@ Treat these as claims to check, not as settled truth:
 
 So when a page keeps regressing on a subject your anchored facts already cover,
 read the learned facts before re-deriving anything. An anchored fact you add on
-the same subject is the durable fix, but it does not remove the learned one.
+the same subject is the durable fix, but it does not remove the learned one —
+`promote_fact` is what moves a *right* learned fact across rather than leaving
+two copies of one claim in two stores. See *Promote the ones you can prove*
+below.
 
 **`propose_fact_retraction({ retractions: [{ fact_key, whats_true, evidence,
 replacement? }] })`** files the case. It does not retire anything — retiring
@@ -484,6 +495,73 @@ page depends on it.
 - Use it especially where several live facts describe ONE subject under
   different keys. Only one can be right, and the others keep reaching the
   generator beside it.
+
+### Promote the ones you can prove — a learned fact has no release
+
+A learned fact is stored per **repository**, with no version on it. The repo's
+`docs/docsync-context.yaml` is stored per **branch**. That difference is not
+cosmetic, and on a project that cuts release branches it is already biting:
+
+- A fact learned validating **2.0** grounds a regenerated **1.9**, where the
+  code says something else. Nothing consults a tag before rendering it.
+- A fact that stopped being true keeps grounding, because nothing re-checks a
+  learned fact against code at any point.
+- Retiring one that is wrong for **2.1** retires it for **1.9** and **2.0**
+  too, including the release where it was right.
+
+The anchored file has none of these, and not because anyone was careful: a
+release branch inherits it, edits it incrementally, and git2docs reads it from
+*that* checkout. Git does the versioning. So **the only way a learned fact gets
+a release is to move it into the repo**, and doing that is part of a normal
+pass — not a cleanup project you schedule for later. Everything an Apply mints
+lands in the unversioned store; this is what drains it.
+
+`list_learned_facts` returns them **in promotion order**: facts carrying
+`evidence` (a `file:line` the maintainer already adopted them from) first, then
+the ones whose sentence names a literal you can go and find, then the rest. It
+also returns `staging` — how many are grounding with no copy in the repo, and
+how old the oldest is. That number falling over a pass is the point of this
+section.
+
+For each one you can prove:
+
+1. **Check it against the code.** It is a sentence a model wrote from a
+   correction the maintainer accepted, which is not the same as one that is
+   true. If it is *wrong*, that is `propose_fact_retraction`, above.
+2. **Write it into `docs/docsync-context.yaml`** under `facts:`, with
+   `src: "path:line"`, the exact `value`, and `pages:` where you know them.
+3. **`promote_fact({ promotions: [{ fact_key, anchor_key, value, src, match?,
+   pages? }] })`** — `fact_key` exactly as `list_learned_facts` printed it,
+   `anchor_key` the key you just gave it in the file.
+4. **Open the PR.**
+
+**It retires nothing, and you must not report the migration as finished.**
+git2docs cannot see your PR and the PR may never merge; retiring on your say-so
+would silently remove grounding the docs depend on. The learned fact keeps
+grounding every page until its **value** appears in the committed file, which
+git2docs checks for itself — then the learned twin retires on its own and the
+claim is re-resolved against the code on every generation from that point.
+Matching is on the exact value, so the YAML must carry the string verbatim; a
+reflowed line is a different claim and nothing lands.
+
+Two things it will not take:
+
+- **A fact still awaiting the maintainer's confirmation.** Promoting moves a
+  claim into their repository and their git history, which is the direction
+  that is hard to undo. Nobody has confirmed that sentence yet.
+- **A fact you cannot anchor.** The 27% that name nothing resolvable are not
+  noise and they are not promotable either: ecosystem and upstream behaviour
+  goes under `external:` in the same file, an editorial rule belongs in
+  `set_guidance`, and a synthesis across the whole system has no anchor by
+  nature. Say which, rather than inventing a `src` that will drop on the next
+  generation.
+
+One caveat worth stating to the maintainer: `facts:` has no `forbid:` key, so a
+learned fact carrying declared adherence patterns loses that machine-checkable
+half on promotion. `list_learned_facts` flags those with
+`forbid_lost_on_promotion`. Promote them anyway if the claim is right — a fact
+with a release and no checker beats a checker on a fact that grounds the wrong
+release — but say what was lost.
 
 ### And the BRIEF — the third place an Apply writes
 
