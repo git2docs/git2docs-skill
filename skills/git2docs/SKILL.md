@@ -844,6 +844,16 @@ single next thing for them to do — lock, regenerate, apply findings, or nothin
 If `maintainer_next_action` says the move is theirs, that sentence is the most
 useful thing in your whole summary.
 
+**Name findings the way the maintainer sees them — never by id.** The Findings
+page renders no ids, so a step that reads "close 522e06ab and 8fa5163b" names
+two things nobody can look up, and the maintainer has to come back and ask.
+Cite the page and section instead — "Installation → Prerequisites" — which
+`report_finding`, `list_findings` and `dismiss_finding` all return as `page`
+and `section`. Where two findings share a page and section, add a few words of
+the claim to tell them apart. `comment_id` / `finding_id` are for your own tool
+calls; they are not addresses a person can use. The same goes for `gap_id`:
+name a product gap by its desired outcome.
+
 ## Before lock: does anything here not belong in public?
 
 Run this once, on the pass before the maintainer locks or publishes a release.
