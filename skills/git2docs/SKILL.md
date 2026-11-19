@@ -245,7 +245,10 @@ not inferred from silence.
    Either read it and `record_section_checked`, or close the pass as
    `findings_filed` / `incomplete`, which is what it is. `recommendation` is your call on
    the RELEASE — see **Concluding the loop**. Both are required; they are
-   different judgements and the second is the one the maintainer acts on.
+   different judgements and the second is the one the maintainer acts on. Only a
+   pass closed `clean` puts a zero on the maintainer's convergence chart, which
+   is why fixing your own findings and stopping leaves the trend unfinished —
+   see **If you fixed it yourself, confirm it before you recommend `lock`**.
 
 ## Choosing the right channel
 
@@ -816,6 +819,36 @@ independent: you filed findings AND you think none of them is worth acting on
 before this release ships. That combination is common and honest. What is not
 honest is manufacturing a `clean` pass to make the panel advance — see below.
 
+### If you fixed it yourself, confirm it before you recommend `lock`
+
+The common ending to a pass is: you filed findings, you fixed them with
+`direct_edit`, and the queue is empty. That pass is `findings_filed` — it is,
+you filed findings — and recommending `lock` there leaves the release in a
+state the maintainer reads as the product contradicting itself:
+
+- The stepper says **Validated & locked — frozen and attested.**
+- The convergence chart ends on your last non-zero bar, under a note saying a
+  pass still has to confirm it.
+
+Both are correct. A zero is drawn only for a pass that **completed with verdict
+`clean`**, and no pass has read the text you just wrote — your own edits are
+the most recent change to it.
+
+So when you have fixed what you filed, and `get_status` shows nothing open,
+nothing applied-but-not-regenerated and no pages awaiting a regeneration:
+**open one more short pass**, re-read the pages you changed,
+`record_section_checked` them, and close that pass `clean` with your `lock`
+recommendation. Then the chart ends on the zero and the lock means what it says.
+
+This is the opposite of minting a pass. A minted pass examines nothing and
+declares `clean` to move the UI. This one examines text that nobody — including
+you — has checked since it changed, which is exactly what a validation pass is
+for. `end_validation` tells you when you are in this case.
+
+If you would rather stop, stop: recommend `lock` and say in the reason that the
+fixes are unconfirmed. That is a legitimate call. It is only dishonest when the
+reason doesn't say so.
+
 ### Never mint a pass to move the UI
 
 If the maintainer tells you the panel says "Waiting", **do not open a session
@@ -981,6 +1014,11 @@ the two statements apart in your summary and make both.
 - **Close the session.** Always `end_validation` with a verdict; use `clean` only
   when no regeneration is in flight. Never open a session just to change what
   the maintainer's panel says.
+- **Confirm your own fixes.** A pass that files findings and then fixes them
+  with `direct_edit` ends `findings_filed`, so nothing has read the text you
+  wrote. Before recommending `lock`, run one more short pass over what you
+  changed and close it `clean` — or say in the reason that the fixes are
+  unconfirmed.
 
 - **Conclude the loop.** Every `end_validation` carries a `recommendation` and a
   one-line reason — `lock`, `regenerate`, `keep_validating` or `blocked`. You are
