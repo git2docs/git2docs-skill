@@ -202,7 +202,9 @@ not inferred from silence.
      where a kind is **absent**, those docs have no backing surface — check the
      code directly and file a **product gap** (a whole missing kind is an
      extractor coverage gap, not a per-page finding). Heed the completeness
-     warnings — treat the surface as a checklist, not gospel.
+     warnings — treat the surface as a checklist, not gospel. If the page ships
+     a figure, **`diagram_claims`** lists what it asserts — verify those exactly
+     as you verify a sentence.
    - **`get_page`** — full Markdown plus the `section_id`s you need to report,
      and grounding signals. If a page makes code claims but `grounded_in_code` is
      `false` (its hints are all prose — README/design docs) or
@@ -210,7 +212,9 @@ not inferred from silence.
      than only filing findings. Read **`unresolved_source_hints`** before
      anything else on the page — those hints ground nothing, so the page was
      written without the code it names (see **Dead source hints** below). Clear
-     them before you spend the pass filing findings about what it says.
+     them before you spend the pass filing findings about what it says. If
+     `diagrams` is present, the page ships one or more figures — see **Figures
+     are claims too**.
    - **Verify against ground truth** — the part only you can do: run each
      documented CLI command (`--help` or a safe/dry-run invocation) and compare
      flags/args/output; check each API endpoint's route/method/params/response
@@ -260,6 +264,11 @@ Using the right channel is the whole game — don't collapse everything into
   contradicts_code, misleading, insufficient, missing_topic. Put the **evidence**
   in `detail` (the command you ran, the file+line you read, the exact mismatch).
   Apply regenerates that section from code.
+- **Figure that is ACCURATE and still fails to communicate** →
+  `report_finding({ section_id, kind: "composition", detail })`. The wrong form,
+  a missing part, an unlabelled axis, a step out of order. See **Figures are
+  claims too**. Filing this as inaccurate/insufficient/misleading sends Apply
+  off to rewrite prose, which is the wrong fix for a wrong form.
 - **Undocumented module** (from `list_coverage_gaps`, no page at all) →
   `report_finding({ module, kind: "missing_topic", detail })`. Apply materialises
   a page grounded in that module. (Provide exactly one of `section_id` or `module`.)
@@ -366,6 +375,41 @@ Using the right channel is the whole game — don't collapse everything into
   **Never dismiss a finding your own `direct_edit` fixed, either.** Dismissal
   records that the finding was WRONG, which erases the fix from the history;
   the edit closes it on its own once the maintainer has approved it.
+
+## Figures are claims too
+
+A figure reads as authoritative and a reader cannot diff a picture against the
+code, so a wrong one costs more than a wrong sentence. `get_page` returns
+`diagrams` for a page that ships one, and there are **two separate judgements**
+to make about each.
+
+**Correctness** — from `claims` (also on `get_page_claims` as `diagram_claims`).
+These are sentences the figure asserts: what a box is, where it sits, what
+connects to what. Verify them against the code and `report_finding` on the
+section id with an ordinary kind when one is wrong. Nothing distinguishes these
+from a wrong sentence except that the reader cannot see they were claimed.
+
+**Composition** — from `structure`, the declaration the figure was drawn from.
+File it with `kind: "composition"`: the wrong form (a sequence wearing a
+topology's clothes), a missing part (the standby write path is absent), an
+unlabelled axis, a step out of order, one band carrying fifteen boxes, or
+*"this page needs a figure and has none"* — and equally *"there should not be a
+figure here"*, which is a legitimate outcome. A composition finding changes the
+**form** or the declared **structure** and the figure is re-rendered from it; it
+never edits markup, so the fix survives the next regeneration.
+
+**Critique structure, never pixels.** You are reading a declaration, not the
+rendered page. You can say a part is missing, mislabelled, misplaced or out of
+order. You **cannot** say it is crowded, that two colours fight, or where the
+eye lands — you have no access to that, and a confident opinion about it is
+worse than silence. Aesthetic judgement reaches git2docs from a maintainer who
+can see the page.
+
+**Don't critique the fence.** If a section's mode is `html` or `svg`, the
+` ```mermaid ` fence in the Markdown is **inert** — it is stripped before the
+reader sees it, and the figure in `diagrams` is what ships. Some figures predate
+the declared contract and carry markup only; `get_page` says how many. For
+those, say so rather than inferring a structure from the markup.
 
 ## Resolve git2docs' own structural checks (Tier-0)
 
@@ -987,6 +1031,11 @@ the two statements apart in your summary and make both.
   findings, sanity-check the TOC: an overloaded page (many subjects / very long /
   weak grounding / broad hints) fabricates no matter what — split it into focused
   subpages with per-page hints first. Cheapest, most durable fidelity lever.
+
+- **A figure's structure, never its pixels.** Judge a declaration for what it
+  asserts and what it leaves out; you cannot see the rendered page, so crowding,
+  colour and visual balance are not yours to call. See **Figures are claims
+  too**.
 
 - **Align first.** Check out the release's commit before comparing docs to code,
   or you'll file false findings.
