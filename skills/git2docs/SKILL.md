@@ -844,6 +844,49 @@ generator's: verify it against the code before you save it, and cite that code i
 never freeze anything the code decides, and read `list_frozen_sections` at the
 start of a pass on a new release.
 
+### A replan can take your records with it
+
+The arithmetic above prices one cost — correct sections re-rolled. There is a
+second one, and on a pass that has accumulated work it is the larger.
+
+A regeneration comes in three shapes, and they are not the same act:
+
+- **one page** (a resync) and **`all`** (every page, no re-plan) MUTATE the
+  live set of pages. Nothing is rebuilt, so every section keeps its identity
+  and everything attached to it is untouched.
+- **`replan`** runs the full pipeline and may change the table of contents. It
+  BUILDS A NEW SET OF PAGES and swaps it in, and every section id in the old
+  one ceases to exist.
+
+Findings, freeze provenance, the maintainer's standing direct-edit grants and
+contest resolutions are keyed to a section. Across a replan they are carried
+over by **identity — (page slug, section type, section key)** — the same rule
+that keeps a dismissal dismissed. Where the new table of contents has a
+counterpart they move across intact. Where it does not — the replan renamed the
+page, split it, or dropped it — **they are not guessed into a similar-looking
+section. They are reported and lost.** That is the right call (a finding
+re-pointed at the wrong page makes the next pass "fix" something that was never
+wrong) and it is still a loss.
+
+So, as a rule: **when the INPUT has moved, resync or `all`. Reserve `replan`
+for when the STRUCTURE is what is wrong.** New code, a re-cut tag, committed
+facts, applied corrections — none of those need the table of contents
+recomputed, and recomputing it puts every finding and every freeze you hold at
+risk for nothing. An overloaded page that must be split is a structural
+problem, and there `replan` is the instrument; say so to the maintainer, and
+say what is outstanding before they run it.
+
+Two related facts worth knowing, because maintainers ask:
+
+- **Re-cutting a tag is safe by itself.** No generation reads a stored commit;
+  every one of them resolves the tag against a fresh clone, so a moved tag is
+  simply picked up on the next run, and nothing happens until one is triggered.
+  The risk is not the tag move. It is running a `replan` afterwards, when the
+  new tree reshapes the table of contents.
+- **Anchored facts and learned facts are not section-scoped** and survive all
+  of this. Anchored facts are read from the repo at the release's tag, so they
+  follow the tag; learned facts are held against the repository.
+
 ## `applied` means accepted, NOT fixed
 
 Applying is two acts now, and the gap between them is where an agent goes wrong.
@@ -853,6 +896,25 @@ Applying is two acts now, and the gap between them is where an agent goes wrong.
 regenerated**. The page still reads exactly as it did when you filed the
 finding. Only when the maintainer runs a regeneration does the fix get written
 and the finding resolve.
+
+**An Apply never writes page content, so there is nothing for a regeneration to
+overwrite.** It writes three INPUTS — the brief, learned facts, pinned source
+hints — and a regeneration is the only thing that makes any of them take
+effect. Not the thing that undoes them. Apply used to queue its own
+regeneration and that was removed precisely so the facts land in the repo
+first. If you find yourself reasoning that a correction was applied and then
+lost, the mechanism you are looking for is not overwriting: it is a correction
+that never reached the page, which `list_brief_corrections` now reports as
+`landing: "did_not_take"`. Read it before you theorise.
+
+The durability order runs the other way from how it looks. A `direct_edit` is
+the most VISIBLE (you can see the frozen section) and the most local: one
+section, no effect anywhere else, and it stops following the code. A brief
+correction is invisible to you and the strongest thing in the system — rendered
+with strict authority in EVERY page prompt, outranking the repository, never
+re-checked against the code by anything, permanent until a maintainer removes
+it. Do not treat a freeze as more durable than an Apply because it is the one
+you can see.
 
 An Apply also writes in two places that outlive the page it fixed: a **learned
 fact** and a **brief correction**, both permanent until a maintainer removes
