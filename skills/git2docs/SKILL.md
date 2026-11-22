@@ -482,8 +482,24 @@ an `origin: "auto"` finding. It clears ITSELF on the next resync once the
 artifact resolves — git2docs resolves every open auto check that has left its
 page's failure set, keyed by page slug so it survives a regeneration. Fix the
 ground truth and it closes on its own. "I re-read the page and it looks right"
-does not make a command exist. If you are convinced the artifact is correct and
-the extractor cannot see it, that is a `report_product_gap`.
+does not make a command exist.
+
+**The one exit, and what it costs.** If you have read the code, confirmed the
+documented call is right, and established that the extractor genuinely cannot
+see it — a flag inherited from a parent command, a framework we do not parse —
+then `dismiss_structural_finding` on the underlying Tier-0 finding, plus
+`report_product_gap` for the extractor itself. The automated check is DERIVED
+from that structural finding, so dismissing it stops the comment as well; until
+git2docs 2026-11-22 it did not, and an agent in exactly your position could
+clear the pill and the count and still watch the same check return on every
+resync, with no way out at all.
+
+It is keyed to the command's identity, so it stays dismissed across
+regenerations — which is the cost: you are turning off a real check on a real
+command, for good, on your own word. File the gap in the same pass so the
+extractor gets fixed and the check can come back meaning something. Never reach
+for this because a check is stubborn; reach for it when you can say precisely
+what the extractor missed and where.
 
 A page carrying several of these at once is telling you something louder than
 any one of them: it is not grounded. Re-ground the page before you spend a pass
@@ -1086,9 +1102,14 @@ the two statements apart in your summary and make both.
   first. Re-proposing what someone has already decided is how a findings list
   stops shrinking.
 
-- **An automated check is fixed, never dismissed.** An `origin: "auto"` finding
+- **An automated check is fixed, not argued with.** An `origin: "auto"` finding
   is a grounding failure proved against the code. Correct the section or
-  `add_source_hints`; it then closes itself. `dismiss_finding` refuses it.
+  `add_source_hints`; it then closes itself, and `dismiss_finding` refuses it
+  either way. There is exactly ONE exit, for the case where you have READ THE
+  CODE, confirmed the documented call is right, and established that git2docs
+  cannot extract it: `dismiss_structural_finding` on the underlying Tier-0
+  finding, plus a `report_product_gap`. That now suppresses the automated check
+  too.
 
 - **Structure before findings.** Before recommending a regen or filing content
   findings, sanity-check the TOC: an overloaded page (many subjects / very long /
