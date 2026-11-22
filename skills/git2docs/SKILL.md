@@ -196,7 +196,16 @@ not inferred from silence.
 
 2. Work page by page — start with the pages that make concrete, checkable claims
    (CLI reference, API reference, configuration, getting-started, deployment).
-   For each:
+
+   **Skip any page `list_pages` marks `removed`.** That is not a publishing
+   state and not a page awaiting content: the maintainer took it OUT of the docs
+   through the TOC editor, and git2docs carries the exclusion forward through
+   every regeneration. Don't read it, don't validate it, don't file findings
+   against it, and never `propose_toc_change({ action: 'remove' })` on it — the
+   removal has already happened. A page marked `pending` is the opposite: real,
+   not generated yet, and worth setting guidance and source hints on now.
+
+   For each page you are validating:
    - **`get_page_claims`** — the checkable surface the extractors parsed. Read
      `extracted_kinds`: where a kind is **present**, verify the docs against it;
      where a kind is **absent**, those docs have no backing surface — check the
@@ -299,6 +308,16 @@ Using the right channel is the whole game — don't collapse everything into
   regens** (a real missing code-derived page is better as a coverage-gap
   `report_finding`, which generates the page grounded in code).
 
+  **A proposal is refused if one already exists for the same page** — matched on
+  the action plus the page slug (or, for `add`, the title), against every
+  proposal on this release still `open` **or already `applied`**. `applied` is
+  the stronger refusal: the maintainer said yes, so the change is DONE and
+  re-proposing it asks them to decide something they have decided. Check
+  `list_findings` for what is already pending before you file — a structural row
+  there carries its `action` and the page it is about. If the docs still read as
+  though an applied change never happened, that is a finding about the result,
+  not a new proposal.
+
   **If the page you want is one of the standard sections, say so with
   `section_id`** — `release_notes`, `troubleshooting`, `cli_reference`,
   `api_reference`, `getting_started`, `architecture`, `key_concepts`,
@@ -371,7 +390,9 @@ Using the right channel is the whole game — don't collapse everything into
   `status`. Dismiss ONLY after re-verifying the page against the code **this
   pass** — not to look converged; a maintainer can reopen it. Keeping the set
   clean means a later blanket Apply doesn't re-push moot (or stale) patches.
-  **Never dismiss an `applied` finding** (below) — it is accepted, not fixed.
+  **Never dismiss an `origin: "auto"` finding** — `dismiss_finding` refuses it
+  (see **Automated checks** below). **Never dismiss an `applied` finding**
+  (below) — it is accepted, not fixed.
   **Never dismiss a finding your own `direct_edit` fixed, either.** Dismissal
   records that the finding was WRONG, which erases the fix from the history;
   the edit closes it on its own once the maintainer has approved it.
@@ -435,6 +456,38 @@ Then **regenerate** — the check re-runs and matching findings clear.
 for a claim you've confirmed correct that git2docs genuinely can't extract (file
 a `report_product_gap` for the extractor gap too). It's keyed to the command's
 identity, so it stays dismissed across regens.
+
+### Automated checks — the same Tier-0 evidence, after an Apply
+
+The checks above also reach you through `list_findings`. After an
+apply-triggered resync, git2docs re-validates every documented CLI command and
+API call on the rewritten page, and each one that still will not resolve
+becomes a finding with **`origin: "auto"`**. One regeneration can produce
+dozens.
+
+These are not the maintainer's opinion. They are the only finding class that is
+**mechanically true** — derived from the extracted code, not from anyone's
+reading of the page — and they come with a `fix` field saying so. Exactly two
+things make one go away:
+
+1. **The documented artifact is wrong** → correct the section (regenerate, or
+   `direct_edit` if it is small and settled).
+2. **The page is not grounded on the file that defines it** → `add_source_hints`
+   pointing at that file, then regenerate. The finding's own text asks for this
+   in so many words — *"point this page at the right source file"* — and it is
+   asking **you**, not the maintainer. `add_source_hints` is your tool.
+
+**You cannot dismiss one, and you do not need to.** `dismiss_finding` refuses
+an `origin: "auto"` finding. It clears ITSELF on the next resync once the
+artifact resolves — git2docs resolves every open auto check that has left its
+page's failure set, keyed by page slug so it survives a regeneration. Fix the
+ground truth and it closes on its own. "I re-read the page and it looks right"
+does not make a command exist. If you are convinced the artifact is correct and
+the extractor cannot see it, that is a `report_product_gap`.
+
+A page carrying several of these at once is telling you something louder than
+any one of them: it is not grounded. Re-ground the page before you spend a pass
+filing prose findings about what it says.
 
 ## Keep the anchored facts current with the code
 
@@ -1026,6 +1079,16 @@ the two statements apart in your summary and make both.
   `docs/docsync-context.yaml`, author it from the checkout and stop. Don't set
   up MCP, don't check out a release commit, don't open a validation session —
   none of the rules below apply to that job.
+
+- **A decision is not a question.** A page `list_pages` marks `removed`, and a
+  `propose_toc_change` the maintainer already applied, are settled. git2docs
+  refuses the repeat, but the refusal is the backstop — read the decisions
+  first. Re-proposing what someone has already decided is how a findings list
+  stops shrinking.
+
+- **An automated check is fixed, never dismissed.** An `origin: "auto"` finding
+  is a grounding failure proved against the code. Correct the section or
+  `add_source_hints`; it then closes itself. `dismiss_finding` refuses it.
 
 - **Structure before findings.** Before recommending a regen or filing content
   findings, sanity-check the TOC: an overloaded page (many subjects / very long /
