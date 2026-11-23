@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.27.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.28.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -108,7 +108,9 @@ documentation — the docs are what we're correcting. Where the repo's own prose
 is authoritative (a support matrix, a compatibility statement), anchor to it and
 say so.
 
-**Anchor contract — enforced, non-negotiable.** Every fact anchors:
+**Anchor contract — enforced, non-negotiable.** Every fact carries a `value:`
+— the exact string the documentation must reproduce, the payload, and the one
+key that is never optional — and anchors:
 
 - `src: <path>:<line>` or `<path>:<start>-<end>`
 - `match:` — the exact string that appears at that line (defaults to the value)
@@ -119,6 +121,44 @@ say so.
 **No anchor, no entry.** If you can't prove it, leave it out: git2docs
 re-resolves every anchor at generation time and drops any that no longer verify,
 so an unanchored fact never grounds.
+
+**The shape.** A LEAF is any mapping carrying `src` or `src_files`. Group leaves
+under whatever section names suit the repo: nesting is free, and nothing below
+an anchored leaf is descended into. The section names below are illustrative —
+derive the repo's own.
+
+```yaml
+facts:
+  images:
+    - name: controller_image            # names the fact; see KEYS below
+      value: ghcr.io/example/controller # the exact string docs must reproduce
+      src: deploy/base/deployment.yaml:31
+      match: ghcr.io/example/controller # defaults to value; give it when they differ
+      pages: [installation, configuration]
+      note: the chart overrides this, and readers copy it verbatim
+  namespaces:
+    workload:                           # a map key names the fact by itself
+      value: example-workload
+      src: config/defaults.go:18
+      match: '"example-workload"'
+  packaging:
+    - name: cli_ships_in_tools_chart
+      value: the CLI ships in the tools chart, not the operator chart
+      src_files: [charts/tools/templates/cli-job.yaml]
+```
+
+**KEYS — give every list item a `name:`.** A fact is keyed by its path
+(`facts.images.controller_image`), and that key is both its supersession handle
+and a retrieval cue. Without a `name:` the key is positional
+(`facts.images.0`): it says nothing about the subject, and inserting a fact
+anywhere above it shifts every later key — which changes the facts fingerprint
+and so re-rolls every page. A map key needs no `name:`; it is already the name.
+
+**PAGES — scope a fact when you know where it belongs.** `pages:` takes page
+slugs. A fact without it goes into the prompt for EVERY page, so a file of
+forty unscoped facts puts forty irrelevant claims in front of every page. Omit
+it only when you genuinely do not know: a wrong narrow list leaves a page
+stale, which is worse than paying for breadth.
 
 **Discipline.** Facts, not prose — exact strings and values only, no
 architecture and no explanations. Add a short `note:` only where getting the
@@ -157,6 +197,15 @@ layout), never from the version numbers. **Omit the block entirely when releases
 are linear:** an absent block means "use the default", which is already right
 there, and a block written from version order alone would replace a default
 that works with a guess that looks authoritative.
+
+**Re-read what you wrote, before you commit it.** A fact whose anchor does not
+resolve is **dropped silently** at generation time — nothing warns, and it
+simply never grounds. On a first generation there is no previous version to
+notice it against, so this check is the only one there is, and you have no
+`verify_facts` yet. For every entry, confirm the `match` (or the `value`, where
+you gave no `match`) occurs literally in the file named by `src`, and that
+every `src_files` path exists. Fix or delete whatever does not resolve, and
+report what you deleted.
 
 **Finish.** The only file you create is `docs/docsync-context.yaml`. Do **not**
 add a checker script or a Makefile target: drift-guarding and re-anchoring are
