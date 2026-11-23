@@ -16,6 +16,9 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
+**Skill version: 1.23.0** — send this as `skill_version` on `begin_validation`.
+It is the only way anyone can tell which guidance you are actually following.
+
 You are the maintainer's **own** agent. You have their codebase and can run
 their runtime, so you can do what git2docs (running remotely) cannot: check that
 the documentation matches reality, fix the inputs it's generated from, and
@@ -189,10 +192,28 @@ same one throughout.
 Open a session so git2docs knows a pass is UNDERWAY — "done" is now **declared**,
 not inferred from silence.
 
-1. **`begin_validation({ version })`** → keep the returned `session_id`. Your
-   reads and reports heartbeat it; if you crash or stop, it's marked *abandoned*
-   after ~5 min (never counted as a false "converged"). Reconnecting resumes a
-   still-fresh session. It's refused while a regeneration is in flight.
+1. **`begin_validation({ version, skill_version })`** → keep the returned
+   `session_id`. Your reads and reports heartbeat it; if you crash or stop, it's
+   marked *abandoned* after ~5 min (never counted as a false "converged").
+   Reconnecting resumes a still-fresh session. It's refused while a regeneration
+   is in flight.
+
+   **Always send `skill_version`** — the **Skill version** line at the top of
+   this file. The response tells you whether you are behind, and that is not a
+   formality: this skill and the MCP tool descriptions are two halves of one
+   contract, and only one half updates itself. Descriptions are served fresh
+   every time you connect. This file is a plugin installed into a pinned local
+   cache that does **not** follow the marketplace, so a maintainer who publishes
+   a correction changes nothing on your machine until they run
+   `/plugin update git2docs-skill` — and you keep whatever you loaded until a
+   **new session** starts.
+
+   So if the response says you are stale: re-reading this file will hand you the
+   same old bytes. Say so to the maintainer, name the two steps, and until then
+   **trust the tool descriptions over this file wherever they disagree.** An
+   agent on a stale skill has no symptom from the inside — it reasons
+   confidently from guidance that was retired weeks ago. This check is the only
+   thing that surfaces it.
 
 2. Work page by page — start with the pages that make concrete, checkable claims
    (CLI reference, API reference, configuration, getting-started, deployment).
