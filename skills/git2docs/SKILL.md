@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.23.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.24.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -813,6 +813,44 @@ For each one, decide which it is:
    `pkg.mod.Class.method` resolve. If a symbol you can see in the code still
    won't resolve, it probably isn't extracted: that's `report_product_gap` (an
    extractor limitation), not a hint to delete.
+
+### Your hints are permanent; the planner's are not
+
+Pruning is **asymmetric**, and the half that applies to you is the half that
+does not clean itself up.
+
+- A hint the **planner** wrote that resolves to nothing is **pruned** at the
+  next generation. It disappears from `source_hints` without anyone acting.
+- A hint **you** pinned is **never** pruned. `add_source_hints` pins everything
+  it writes — that is what makes a pin worth giving — so a dead one stays on the
+  page, in `source_hints`, for every future regeneration, surfacing only in
+  `unresolved_source_hints`.
+
+So the two kinds of mistake have opposite lifespans. A bad planner hint is a
+transient. **A bad hint of yours is permanent until you remove it**, and while
+it sits there it is doing the thing described above: naming code that does not
+exist, on a page that regenerates from that name.
+
+Three rules follow.
+
+1. **Pin paths you have verified, not paths you expect.** Check the path exists
+   at the validated commit before pinning it. `git ls-files <path>` is the whole
+   test and it costs you nothing.
+
+2. **Do not shotgun broad globs across many pages.** Pinning `api/**` to
+   fifteen pages because it helped on one creates fifteen permanent pins, and
+   every one that misses is a fabrication source you now own. Pin per page,
+   from what that page actually claims.
+
+3. **`remove_source_hints` is the only way out.** There is no run that will
+   tidy your pin for you. If you pinned it and it is dead, you remove it — and
+   pass the string exactly as `get_page` reports it, because `removed: []`
+   means nothing matched and nothing changed.
+
+The corollary for a re-grounding pass: after you pin, read `get_page` again on
+the next generation and check `unresolved_source_hints`. A pin that did not
+resolve is not a neutral no-op you can leave behind — it is a hint you added
+that now grounds nothing, and it will still be there on the pass after this one.
 4. **It never existed** — a conventional-looking path that was guessed rather
    than read. Delete it, and don't replace a guess with another guess.
 
