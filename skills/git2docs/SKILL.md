@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.25.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.26.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -632,6 +632,24 @@ correction, written by a model, stored per repo. **`list_learned_facts`** lists
 the live set with the finding each came from (`dimension` / `contains` narrow
 it; `offset` pages).
 
+**`status` decides what you are looking at.** The default lists what is IN
+FORCE. A fact an Apply or an `apply_correction` minted is **pending** until the
+maintainer confirms it: it grounds nothing, and it is invisible in the default
+listing. `status: "awaiting"` lists those, `"all"` lists both, and every row
+carries `in_force` and `pending_since`.
+
+Read the pending set whenever:
+
+- **You just ran `apply_correction`.** Your replacement lands pending. Checking
+  that it is there is how you know the correction took, and a correction you did
+  not verify is a correction you only believe you made.
+- **A page keeps repeating an error you have already corrected.** A claim
+  sitting in the confirm queue for the third or fourth time is the loudest
+  signal this store has. It means the generator was never told — not that the
+  fact is missing. Filing a fifth copy cannot help; say so to the maintainer and
+  ask them to confirm one.
+- **You are about to re-derive something.** It may already be there, waiting.
+
 Treat these as claims to check, not as settled truth:
 
 - Nothing re-checks them. `verify_facts` covers anchored facts only; a learned
@@ -646,6 +664,11 @@ Treat these as claims to check, not as settled truth:
   contradicting the repo's own anchored facts, and the pages on that subject
   came back wrong pass after pass — including after the anchored facts were
   right.
+- **`restates` is computed for you.** Every row names the other keys asserting
+  the same claim, with a verdict: `restatement` (the same thing said twice) or
+  `contradiction` (different values for one subject). You do not have to spot
+  these by eye — but you are the one who can read the code, so you are the one
+  who can settle a `contradiction`.
 - **Two live facts can state different values for the same thing.** One repo had
   `--token-lifetime` in force twice — "default 24h, minimum 10m" and "one year
   (8760 hours), not 24 hours" — and both went into every prompt, so the pages
