@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.26.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.27.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -49,6 +49,35 @@ Write a `facts:` section (and `external:` if needed) into
 strings the documentation must get right that a generator cannot extract from
 code. Create the file if it doesn't exist; **keep any existing product/sections
 config in it.**
+
+**What this file is actually parsed for.** Three blocks are read structurally,
+and nothing else is:
+
+- **`facts:`** — anchored facts. Re-resolved against the real source on every
+  generation and dropped when the match is gone. `src`, `match`, `near`,
+  `src_files`, `pages` and `note` are read **here and only here**.
+- **`external:`** — pass-through claims about other tools, unanchorable by
+  definition. Rendered into the same prompt block, scoped by the same rule.
+- **`releases:`** — the release lineage, because `previous_tag` is a
+  chronological shift register and cannot be trusted to name the semantic
+  predecessor.
+
+Everything else the file carries — `product:`, `sections:`, `authority:`, your
+own prose — is loaded **whole, as text, into the comprehend prompt**. That
+shapes the product brief, once, globally. It is not per-page, and **it pins no
+file into any page's retrieval set.** Keep those blocks (do not delete a
+maintainer's config), but do not expect structure from them.
+
+Two consequences worth stating plainly, because neither is visible from
+outside and an unparsed key produces **no warning**:
+
+- `src_files:` on a `sections:` entry is ignored. It is a `facts:` key.
+- There is no way, in this file, to pin a particular source file to a
+  particular page. If a page needs specific code in front of the generator,
+  that is `add_source_hints` — which needs a page slug, so it only exists
+  after the first generation — or a `facts:` entry with `src` and a `pages:`
+  scope, which works from the first run. Prefer the second when you can
+  anchor it.
 
 **What belongs here — and what doesn't.** git2docs already extracts the
 declarative surfaces: CRD schemas (field names, enum values, defaults, printer
