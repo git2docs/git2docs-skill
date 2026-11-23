@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.24.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.25.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -305,6 +305,9 @@ Using the right channel is the whole game — don't collapse everything into
 - **Exact string no extractor derives** — an object/namespace/label name, an
   artifact name, a compatibility claim → **`report_fact`** (see the next
   section). This is the *durable* fix; don't bury such a string in finding prose.
+  **"No extractor derives" is the whole condition** — if the claim is the
+  EXISTENCE of a command, subcommand or flag, git2docs already has it and the
+  call is refused. See **A fact is not for something we already extract**.
 - **Page fabricating because it wasn't pointed at its code** →
   `add_source_hints({ space_slug, page_slug, hints })` → the page re-synthesizes
   grounded in that code; the hints persist across future regens.
@@ -417,6 +420,45 @@ Using the right channel is the whole game — don't collapse everything into
   **Never dismiss a finding your own `direct_edit` fixed, either.** Dismissal
   records that the finding was WRONG, which erases the fix from the history;
   the edit closes it on its own once the maintainer has approved it.
+
+### A fact is not for something we already extract
+
+`report_fact` refuses a claim the extracted code surface already carries, and
+answers `refused: "restates_extracted_surface"` with the tokens it confirmed.
+That is not strictness, it is the difference between fixing a page and hiding
+why it broke.
+
+When a page gets a command or a flag wrong and the surface already declares it,
+the page was not missing knowledge. **Synthesis had the surface and did not use
+it.** Capturing the right answer as a fact makes that page right and leaves the
+reason unreported and unfixed, so the next page on the same subject gets it
+wrong again — and now there is a permanent sentence making the failure look
+handled. One repo reached 247 live facts this way, with the extracted CLI
+surface sitting beside them saying the same things.
+
+So:
+
+- **Inventory claims are not facts.** "`zone-credential` has create, rotate,
+  inspect and delete", "`create` requires `--zone`" — `get_page_claims` already
+  shows these as an extracted surface. Fix the grounding: `add_source_hints` to
+  put the declaring file in front of the generator, or `report_finding` against
+  the page. If the surface is itself wrong or incomplete, that is
+  `report_product_gap` against git2docs — the more useful report, and the one a
+  fact would have buried.
+- **Value claims still are facts, and this does not touch them.** The surface
+  records a flag's name, type, enum values and whether it is required. It does
+  **not** record its DEFAULT. `--token-lifetime defaults to 24h` is exactly what
+  `report_fact` is for and goes through. So does a namespace, a label, an
+  artifact name, a compatibility matrix.
+- **The check abstains rather than guess.** No extracted CLI surface, a surface
+  the extractor itself called incomplete, or a claim naming a flag the surface
+  does not declare, and it says nothing at all. A refusal therefore means the
+  surface really does carry the claim — read the refusal's `confirms` before
+  arguing with it.
+
+If you believe a refusal is wrong, do not reword the fact to get past it. File
+the product gap; a fact that slipped through would ground every future page
+with the defect still in place.
 
 ## Figures are claims too
 
@@ -604,6 +646,15 @@ Treat these as claims to check, not as settled truth:
   contradicting the repo's own anchored facts, and the pages on that subject
   came back wrong pass after pass — including after the anchored facts were
   right.
+- **Two live facts can state different values for the same thing.** One repo had
+  `--token-lifetime` in force twice — "default 24h, minimum 10m" and "one year
+  (8760 hours), not 24 hours" — and both went into every prompt, so the pages
+  could state either. The maintainer's Findings page now flags an in-force pair
+  that disagrees, but nothing resolves it on its own: when you read the learned
+  set, look for two facts carrying different numbers, URLs or quoted values for
+  one subject, and `propose_fact_retraction` the wrong one with the line that
+  proves it. A duplicate is untidy; a disagreement is wrong on every page that
+  reads it.
 
 So when a page keeps regressing on a subject your anchored facts already cover,
 read the learned facts before re-deriving anything. An anchored fact you add on
