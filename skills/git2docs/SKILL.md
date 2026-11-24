@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.28.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.29.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -1402,13 +1402,15 @@ the two statements apart in your summary and make both.
 - **Right channel.** Wrong claim → finding; un-derivable exact string → fact;
   missing derivable topic → section / coverage gap; structure → toc proposal;
   platform limitation → product gap.
-- **Root cause before Apply.** A finding becomes an Apply patch the next full
-  regen overwrites — and a facts-triggered regen is costly — so route to the
-  durable fix first: wrong/stale code or a misleading comment → fix the **repo**
-  (cheap regen — only pages reading that file re-synth); un-derivable exact string
-  → **`report_fact`**. Reserve `report_finding` → Apply for a genuine synthesis
+- **Root cause before Apply.** An Apply writes no page text, so **a regeneration
+  cannot overwrite it** — a regeneration is what makes it take effect. Route to
+  the durable fix first for the real reason: a brief correction outranks the
+  repository on every page, permanently, and nothing re-checks it against the
+  code. Wrong/stale code or a misleading comment → fix the **repo** (cheap regen
+  — only pages reading that file re-synth); un-derivable exact string →
+  **`report_fact`**. Reserve `report_finding` → Apply for a genuine synthesis
   error over correct code. When you summarize, **recommend Apply LAST** — repo
-  fixes + facts + one regen first, so you don't Apply patches a regen throws away.
+  fixes + facts + one regen first, so one regeneration does the work of two.
 - **Prefer the sustaining fix.** Re-ground (`add_source_hints`) or capture a fact
   over a frozen `direct_edit`; a `direct_edit` stops that section regenerating.
 - **Don't spam.** One finding per real problem; dedupe. No stylistic nitpicks —
