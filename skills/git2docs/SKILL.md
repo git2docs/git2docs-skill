@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.30.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.31.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -50,7 +50,7 @@ strings the documentation must get right that a generator cannot extract from
 code. Create the file if it doesn't exist; **keep any existing product/sections
 config in it.**
 
-**What this file is actually parsed for.** Three blocks are read structurally,
+**What this file is actually parsed for.** Four blocks are read structurally,
 and nothing else is:
 
 - **`facts:`** — anchored facts. Re-resolved against the real source on every
@@ -61,6 +61,20 @@ and nothing else is:
 - **`releases:`** — the release lineage, because `previous_tag` is a
   chronological shift register and cannot be trusted to name the semantic
   predecessor.
+- **`constraints:`** — a list of plain sentences, rendered into **every page's**
+  prompt under "Hard constraints — never state the opposite of these". This
+  said "three blocks" until 2026-11-26 and omitted this one, which is wrong in
+  the direction that matters: an agent reading that a constraint only shaped
+  the brief would route a product decision to the wrong channel, or conclude a
+  constraint it could see was doing nothing.
+
+  **Its one limitation, and it is a real one: `constraints:` is NOT
+  page-scopable.** `pages:` is read on a `facts:` entry and is ignored here, so
+  every constraint reaches every page. A constraint is the right home for a
+  decision no line of code can prove — "upstream Kubernetes is not supported" —
+  and the wrong home for anything that could be anchored instead. Prefer a
+  `facts:` entry with `src`/`match` whenever the code can carry the claim; the
+  anchored one is re-checked every generation and the constraint never is.
 
 Everything else the file carries — `product:`, `sections:`, `authority:`, your
 own prose — is loaded **whole, as text, into the comprehend prompt**. That
