@@ -836,11 +836,21 @@ a release is to move it into the repo**, and doing that is part of a normal
 pass — not a cleanup project you schedule for later. Everything an Apply mints
 lands in the unversioned store; this is what drains it.
 
-`list_learned_facts` returns them **in promotion order**: facts carrying
-`evidence` (a `file:line` the maintainer already adopted them from) first, then
-the ones whose sentence names a literal you can go and find, then the rest. It
-also returns `staging` — how many are grounding with no copy in the repo, and
-how old the oldest is. That number falling over a pass is the point of this
+`list_learned_facts` returns them **in promotion order**, and the first rank is
+the one to clear: `promotability: "anchor_staged"` means git2docs has **already
+derived the anchor** — an Apply took the `file:line` from a finding the
+maintainer cited, and the maintainer confirmed the fact. The `anchor` field on
+that row carries the `value`, the `src` and any `pages`, and a capture is
+already staged under the fact's own key. **Nothing is in the file yet**, and
+that is the only thing left to do: copy the entry into
+`docs/docsync-context.yaml` verbatim and commit. Do not re-derive it, and do
+not call `promote_fact` for it — the capture exists; a second one would just
+restamp it.
+
+Then `has_evidence` (a `file:line` the maintainer adopted it from), then the
+ones whose sentence names a literal you can go and find, then the rest. It also
+returns `staging` — how many are grounding with no copy in the repo, and how
+old the oldest is. That number falling over a pass is the point of this
 section.
 
 For each one you can prove:
