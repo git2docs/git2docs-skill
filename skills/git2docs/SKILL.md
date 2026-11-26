@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.31.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.32.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -68,13 +68,25 @@ and nothing else is:
   the brief would route a product decision to the wrong channel, or conclude a
   constraint it could see was doing nothing.
 
-  **Its one limitation, and it is a real one: `constraints:` is NOT
-  page-scopable.** `pages:` is read on a `facts:` entry and is ignored here, so
-  every constraint reaches every page. A constraint is the right home for a
-  decision no line of code can prove — "upstream Kubernetes is not supported" —
-  and the wrong home for anything that could be anchored instead. Prefer a
-  `facts:` entry with `src`/`match` whenever the code can carry the claim; the
-  anchored one is re-checked every generation and the constraint never is.
+  **It takes `pages:` too, since 2026-11-26.** A bare string reaches every
+  page, which is what every file written before then does and still means.
+  An entry written as a mapping is scoped like a fact:
+
+  ```yaml
+  constraints:
+    - Upstream Kubernetes is not supported.          # every page
+    - text:  The Site Manager API requires a bearer token.
+      pages: [api-reference, authentication]
+  ```
+
+  A constraint is the right home for a decision **no line of code can prove** —
+  "upstream Kubernetes is not supported" is a product decision, not something
+  the repository emits. It is the wrong home for anything anchorable: an
+  anchored fact is re-resolved against source every generation and dropped when
+  the code moves, and a constraint is **never** re-checked. Prefer `facts:`
+  with `src`/`match` whenever the code can carry the claim, and scope whatever
+  you put here — an unscoped constraint is an instruction to nineteen pages
+  about one.
 
 Everything else the file carries — `product:`, `sections:`, `authority:`, your
 own prose — is loaded **whole, as text, into the comprehend prompt**. That
