@@ -16,7 +16,7 @@ description: >-
 
 # git2docs — validate your docs and keep them true to the code
 
-**Skill version: 1.29.0** — send this as `skill_version` on `begin_validation`.
+**Skill version: 1.30.0** — send this as `skill_version` on `begin_validation`.
 It is the only way anyone can tell which guidance you are actually following.
 
 You are the maintainer's **own** agent. You have their codebase and can run
@@ -935,6 +935,44 @@ Do this **structure-and-hints pre-flight — the TOC, each page's scope, its
 hints — BEFORE** you recommend a regen or start filing content findings. Work in
 pages and hints; `docsync-context` config is just the durable backing that makes
 the split survive regens.
+
+### And the inverse — MERGE, which is remove + re-hint, in that order
+
+The same lever runs the other way, and it is the stronger one when several
+pages document **one** subject. Each page derives its own prose and its own
+examples from the same source, independently, on every run — so N pages over
+one API is N chances per regeneration to get the same endpoint wrong, and a
+different subset is wrong each time. That is an error *generator*: the finding
+count has a floor, and no number of Apply rounds gets under it. One real case:
+`ui/app.py` reached **ten** pages of one product, and eighteen of its
+twenty-seven open findings sat on those pages.
+
+Spot it the same way you spot an overloaded page, but across pages: compare
+`source_hints` from `list_pages` / `get_page` and look for the same file feeding
+several of them, or several pages whose findings keep repeating the same claim
+in slightly different words.
+
+**`remove` DELETES. There is no merge action.** A removed page's sections are
+hidden; nothing moves to a survivor, and the survivor regenerates from ITS OWN
+unchanged hints and description. File the removes first and the maintainer
+Applies a "consolidation" that simply loses the content.
+
+So merge is two steps, in this order:
+
+1. **Widen the survivor** — `add_source_hints` with the code the removed pages
+   were grounded in, plus `set_page_description` / `set_guidance` so its scope
+   actually says it now covers that subject. Do this while the pages you are
+   about to remove still exist, so you can read their hints.
+2. **Then** `propose_toc_change({ action: 'remove', … })` for each page the
+   survivor now covers.
+
+Then regenerate. Check the survivor afterwards: a page that just absorbed three
+subjects is a candidate for the overload problem above, and the two levers can
+fight each other.
+
+Say which page wins and what it absorbs in every rationale, and flag the
+arguable ones as arguable — a consolidation is the maintainer's call about
+their own documentation, and reversing one later costs a regeneration.
 
 ## Dead source hints
 
