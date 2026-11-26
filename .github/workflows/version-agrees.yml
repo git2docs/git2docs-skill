@@ -1,0 +1,34 @@
+# The two halves of the version contract must say the same number.
+#
+# `.claude-plugin/plugin.json` is what the marketplace installs and what
+# `/plugin update` compares. The **Skill version** line in SKILL.md is what the
+# skill instructs an agent to send as `skill_version` on begin_validation, and
+# it is the only thing git2docs can see.
+#
+# They drifted: plugin.json went to 1.33.0 and then 1.34.0 while the header sat
+# at 1.32.0. Nothing noticed, because the header is read by an agent on a
+# customer's machine and the json is read by a package manager, and no one
+# process ever holds both. Every agent on the two newest releases reported
+# itself as 1.32.0, so `validation_session.skill_version` — which exists to
+# answer "which skill versions are live across the fleet" — under-counted
+# exactly the releases we had just asked people to update to.
+#
+# It would have become worse than wrong telemetry on the next bump of
+# EXPECTED_SKILL_VERSION past 1.32.0: agents genuinely on 1.34.0 would be told
+# they were stale and to update again, which is how a warning gets ignored.
+#
+# So the push fails instead.
+name: version agrees
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: plugin.json and SKILL.md state the same version
+        run: node .github/check-version.mjs
