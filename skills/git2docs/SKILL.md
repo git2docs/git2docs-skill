@@ -515,7 +515,12 @@ Using the right channel is the whole game — don't collapse everything into
 - **A finding already satisfied by the current docs** (a prior finding that a
   regen or repo fix has since addressed) → `dismiss_finding({ finding_id, reason })`.
   `list_findings` shows the live set (yours + the maintainer's), each with a
-  `status`. Dismiss ONLY after re-verifying the page against the code **this
+  `status`. A maintainer's finding may carry **`maintainer_cited`** — a file,
+  sometimes `file:line`, they named as evidence when they filed it. **Read that
+  code before you judge the finding**: it is the cheapest confirmation you will
+  get, and it is the one place a human finding carries the anchor yours are
+  required to. Its absence means they did not say where, never that no such
+  code exists. Dismiss ONLY after re-verifying the page against the code **this
   pass** — not to look converged; a maintainer can reopen it. Keeping the set
   clean means a later blanket Apply doesn't re-push moot (or stale) patches.
   **Never dismiss an `origin: "auto"` finding** — `dismiss_finding` refuses it
